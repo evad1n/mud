@@ -9,9 +9,10 @@ import (
 
 // Zone represents a an area of the world
 type Zone struct {
-	ID    int
-	Name  string
-	Rooms []*Room
+	ID      int
+	Name    string
+	Rooms   []*Room
+	Players []*Player
 }
 
 // Room represents a room in a zone
@@ -21,6 +22,7 @@ type Room struct {
 	Name        string
 	Description string
 	Exits       [6]Exit
+	Players     []*Player
 }
 
 // Exit represents a connection between rooms
@@ -106,7 +108,7 @@ func readZones(tx *sql.Tx) error {
 			return fmt.Errorf("reading a zone from the database: %v", err)
 		}
 		// Store zone
-		zones[ID] = &Zone{ID: ID, Name: name, Rooms: []*Room{}}
+		zones[ID] = &Zone{ID: ID, Name: name, Rooms: []*Room{}, Players: []*Player{}}
 	}
 	// Check for errors from iterating over rows.
 	if err := rows.Err(); err != nil {
@@ -137,7 +139,7 @@ func readRooms(tx *sql.Tx) error {
 		}
 
 		// Store room
-		rooms[ID] = &Room{ID: ID, Zone: zones[zoneID], Name: name, Description: desc}
+		rooms[ID] = &Room{ID: ID, Zone: zones[zoneID], Name: name, Description: desc, Players: []*Player{}}
 		// Link to zone
 		zones[zoneID].Rooms = append(zones[zoneID].Rooms, rooms[ID])
 	}
