@@ -7,30 +7,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// Zone represents a an area of the world
-type Zone struct {
-	ID      int
-	Name    string
-	Rooms   []*Room
-	Players []*Player
-}
-
-// Room represents a room in a zone
-type Room struct {
-	ID          int
-	Zone        *Zone
-	Name        string
-	Description string
-	Exits       [6]Exit
-	Players     []*Player
-}
-
-// Exit represents a connection between rooms
-type Exit struct {
-	To          *Room
-	Description string
-}
-
 var (
 	db    *sql.DB
 	zones map[int]*Zone

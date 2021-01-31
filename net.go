@@ -4,23 +4,11 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"math"
 	"net"
 	"strings"
 	"time"
 )
-
-// Input represents an event going from the player to MUD
-type Input struct {
-	Player  *Player
-	Command Command
-	Params  string
-}
-
-// Output represents an event going from MUD to the player
-type Output struct {
-	Player *Player
-	Effect string
-}
 
 // Listen for incoming client connections
 func listenConnections(in chan Input) {
@@ -41,7 +29,7 @@ func listenConnections(in chan Input) {
 // Handle a client connection with their own command loop
 func handleConnection(conn net.Conn, in chan Input) {
 	clientLog := log.New(conn, "CLIENT: ", log.Ldate|log.Ltime)
-	fmt.Println(conn)
+	fmt.Fprintln(conn)
 	clientLog.Printf("Connected to MUD server on %s:%s\n\n", serverAddress, port)
 
 	// Log connection to server
@@ -60,15 +48,23 @@ func handleConnection(conn net.Conn, in chan Input) {
 
 	// Init player
 	out := make(chan Output)
-	player := Player{name, conn, out, rooms[3001].Zone, rooms[3001]}
+	player := &Player{
+		Name:  name,
+		Conn:  conn,
+		Log:   clientLog,
+		Chan:  out,
+		Begin: time.Now(),
+		Zone:  rooms[3001].Zone,
+		Room:  rooms[3001],
+	}
 	// Add to data
-	players[player.Name] = &player
-	player.Zone.Players = append(player.Zone.Players, &player)
-	player.Room.Players = append(player.Room.Players, &player)
-	printLocation(&player)
-	fmt.Fprintln(conn, "Type 'cmds' or 'help' to see all available commands!")
+	players[player.Name] = player
+	player.Zone.Players = append(player.Zone.Players, player)
+	player.Room.Players = append(player.Room.Players, player)
+	printLocation(player)
+	fmt.Fprintln(conn, "Type 'help' to see all available commands!")
 
-	go listenMUD(&player, clientLog)
+	go player.listenMUD()
 
 	// FIX: network failure needs to cause dc
 	// Initial prompt
@@ -80,63 +76,33 @@ func handleConnection(conn net.Conn, in chan Input) {
 		if words := strings.Fields(scanner.Text()); len(words) > 0 {
 			// Check if cmd exists
 			if validCmd, exists := commands[strings.ToLower(words[0])]; exists {
-				in <- Input{&player, validCmd, strings.Join(words[1:], " ")}
+				in <- Input{player, validCmd, strings.Join(words[1:], " ")}
 			} else {
 				fmt.Fprintln(conn, "Unrecognized command!")
 			}
 		}
-
-		// Prompt
-		fmt.Fprintf(conn, "\n>>> ")
 	}
 	if err := scanner.Err(); err != nil {
-		serverLog.Println("BAD")
 		// Connection has been closed
-		in <- Input{&player, Command{"END_CONN", "END", nil}, "Connection successfully terminated"}
+		in <- Input{player, Command{"END_CONN", "END_CONN", "Terminates the connection", nil}, "Connection successfully terminated"}
 	}
 }
 
 // Have a client listen for mud events
-func listenMUD(p *Player, clientLog *log.Logger) {
+func (p *Player) listenMUD() {
 	for ev := range p.Chan {
+		fmt.Fprintln(p.Conn)
 		fmt.Fprintln(p.Conn, ev.Effect)
+		// Prompt
+		fmt.Fprintf(p.Conn, "\n>>> ")
 	}
-	clientLog.Printf("Disconnected from MUD server on %s:%s\n", serverAddress, port)
+	fmt.Fprintf(p.Conn, "\n\n")
+	p.Log.Printf("Disconnected from MUD server on %s:%s\n", serverAddress, port)
+	playTime := time.Now().Sub(p.Begin)
+	h, m := int(math.Round(playTime.Hours())), int(math.Round(playTime.Minutes()))%60
+	p.Log.Printf("You played for %d %s and %d %s", h, plural(h, "hour"), m, plural(m, "minute"))
 	// Log to server
 	serverLog.Printf("Player '%s' disconnected from %s\n", p.Name, p.Conn.RemoteAddr().String())
 	// Close connection
 	p.Conn.Close()
-}
-
-func getLocalAddress() string {
-	var localaddress string
-
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		panic("getLocalAddress: failed to find network interfaces")
-	}
-
-	// find the first non-loopback interface with an IPv4 address
-	for _, elt := range ifaces {
-		if elt.Flags&net.FlagLoopback == 0 && elt.Flags&net.FlagUp != 0 {
-			addrs, err := elt.Addrs()
-			if err != nil {
-				panic("getLocalAddress: failed to get addresses for network interface")
-			}
-
-			for _, addr := range addrs {
-				if ipnet, ok := addr.(*net.IPNet); ok {
-					if ip4 := ipnet.IP.To4(); len(ip4) == net.IPv4len {
-						localaddress = ip4.String()
-						break
-					}
-				}
-			}
-		}
-	}
-	if localaddress == "" {
-		panic("localaddress: failed to find non-loopback interface with valid IPv4 address")
-	}
-
-	return localaddress
 }
