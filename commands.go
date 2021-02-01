@@ -399,11 +399,7 @@ func doThink(p *Player, cmd string) {
 
 func doQuit(p *Player, _ string) {
 	fmt.Fprintf(p.Conn, "Goodbye %s!\n", p.Name)
-	// Shut down channel
-	close(p.Chan)
-	p.Chan = nil
-	// Remove player
-	players[p.Name] = nil
+	p.disconnect()
 }
 
 // Helper functions

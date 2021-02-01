@@ -1,6 +1,18 @@
-# mud
+# MUD
 Mult-user dungeon written in Go
 
-## TODO
+## Start server
 
-- fix network failure cleanup
+```bash
+go build && ./mud
+```
+
+## Connecting
+
+Default port is 9001
+
+Host is localhost for same machine
+
+```bash
+telnet <HOST> <PORT>
+```

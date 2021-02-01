@@ -66,7 +66,6 @@ func handleConnection(conn net.Conn, in chan Input) {
 
 	go player.listenMUD()
 
-	// FIX: network failure needs to cause dc
 	// Initial prompt
 	fmt.Fprintf(conn, "\n>>> ")
 	for scanner.Scan() {
@@ -83,9 +82,11 @@ func handleConnection(conn net.Conn, in chan Input) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		// Connection has been closed
-		in <- Input{player, Command{"END_CONN", "END_CONN", "Terminates the connection", nil}, "Connection successfully terminated"}
+		// Ignore
+		// serverLog.Printf("Client (%s) connection error: %v", conn.RemoteAddr().String(), err)
 	}
+	// Connection has been closed
+	in <- Input{player, Command{"END_CONN", "END_CONN", "Terminates the connection", nil}, "Connection successfully terminated"}
 }
 
 // Have a client listen for mud events
@@ -101,8 +102,19 @@ func (p *Player) listenMUD() {
 	playTime := time.Now().Sub(p.Begin)
 	h, m := int(math.Round(playTime.Hours())), int(math.Round(playTime.Minutes()))%60
 	p.Log.Printf("You played for %d %s and %d %s", h, plural(h, "hour"), m, plural(m, "minute"))
-	// Log to server
-	serverLog.Printf("Player '%s' disconnected from %s\n", p.Name, p.Conn.RemoteAddr().String())
 	// Close connection
 	p.Conn.Close()
+	serverLog.Printf("Player '%s' connection terminated\n", p.Name)
+}
+
+// Terminate a connection
+func (p *Player) disconnect() {
+	// Shut down channel
+	close(p.Chan)
+	p.Chan = nil
+	// Remove player
+	players[p.Name] = nil
+	// Log to server
+	serverLog.Printf("Player '%s' disconnected from %s\n", p.Name, p.Conn.RemoteAddr().String())
+	// Connection will automatically close after channel is closed
 }

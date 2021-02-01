@@ -45,13 +45,12 @@ func main() {
 	for {
 		// Get input
 		ev := <-in
-		// Check for closed connection to ignore
+		// Check for closed connection
 		if ev.Command.Category == "END_CONN" {
 			if ev.Player.Chan != nil {
-				close(ev.Player.Chan)
-			} else {
-				serverLog.Printf("Player '%s' connection terminated\n", ev.Player.Name)
+				ev.Player.disconnect()
 			}
+			// Already shutting down -> ignore
 			continue
 		}
 		// serverLog to server
