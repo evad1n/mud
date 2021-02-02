@@ -99,7 +99,7 @@ func (p *Player) listenMUD() {
 		p.erasePrompt()
 		fmt.Fprintln(p.Conn, ev.Effect)
 		// New prompt
-		fmt.Fprintf(p.Conn, "------------------------------------\n>>> ")
+		p.prompt()
 	}
 	p.Log.Printf("Disconnected from MUD server on %s:%s\n", serverAddress, port)
 	playTime := time.Now().Sub(p.Begin)
@@ -115,6 +115,8 @@ func (p *Player) disconnect() {
 	close(p.Chan)
 	p.Chan = nil
 	// Remove player
+	p.Room.removePlayer(p)
+	p.Zone.removePlayer(p)
 	delete(players, p.Name)
 	// Log to server
 	serverLog.Printf("Player '%s' disconnected from %s\n", p.Name, p.Conn.RemoteAddr().String())

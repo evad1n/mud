@@ -440,7 +440,6 @@ func (p *Player) doThink(cmd string) {
 // Special
 
 func (p *Player) doQuit(_ string) {
-	fmt.Fprint(p.Conn, "\x1b[2J")
 	fmt.Fprintf(p.Conn, "Goodbye %s!\nThanks for playing!\n\n", p.Name)
 	p.disconnect()
 }
