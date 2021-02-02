@@ -37,9 +37,9 @@ type Command struct {
 
 // Input represents an event going from the player to MUD
 type Input struct {
-	Player  *Player
-	Command Command
-	Params  string
+	Player *Player
+	Text   string
+	End    bool
 }
 
 // Output represents an event going from MUD to the player

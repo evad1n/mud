@@ -68,31 +68,31 @@ func defaultCommands() {
 	// In order of precedence
 
 	// Navigation
-	addCommand("north", Command{"north", "navigation", "Move north", doNorth})
-	addCommand("south", Command{"south", "navigation", "Move south", doSouth})
-	addCommand("east", Command{"east", "navigation", "Move east", doEast})
-	addCommand("west", Command{"west", "navigation", "Move west", doWest})
-	addCommand("up", Command{"up", "navigation", "Move up", doUp})
-	addCommand("down", Command{"down", "navigation", "Move down", doDown})
-	addCommand("recall", Command{"recall", "navigation", "Return to the Temple of Midgaard", doRecall})
+	addCommand("north", Command{"north", "navigation", "Move north", (*Player).doNorth})
+	addCommand("south", Command{"south", "navigation", "Move south", (*Player).doSouth})
+	addCommand("east", Command{"east", "navigation", "Move east", (*Player).doEast})
+	addCommand("west", Command{"west", "navigation", "Move west", (*Player).doWest})
+	addCommand("up", Command{"up", "navigation", "Move up", (*Player).doUp})
+	addCommand("down", Command{"down", "navigation", "Move down", (*Player).doDown})
+	addCommand("recall", Command{"recall", "navigation", "Return to the Temple of Midgaard", (*Player).doRecall})
 	// Information
-	addCommand("look", Command{"look", "information", "Look around or in a specific direction", doLook})
-	addCommand("where", Command{"where", "information", "Display names and locations of all players in current zone", doWhere})
-	addCommand("help", Command{"cmds", "information", "List all commands", doListCommands})
+	addCommand("look", Command{"look", "information", "Look around or in a specific direction", (*Player).doLook})
+	addCommand("where", Command{"where", "information", "Display names and locations of all players in current zone", (*Player).doWhere})
+	addCommand("help", Command{"help", "information", "List all commands", (*Player).doListCommands})
 	// Communication
-	addCommand("gossip", Command{"gossip", "communication", "Speak to all players on the server", doGossip})
-	addCommand("shout", Command{"shout", "communication", "Speak to all players in the current zone", doShout})
-	addCommand("say", Command{"say", "communication", "Speak to all players in the current room", doSay})
-	addCommand("tell", Command{"tell", "communication", "Speak privately to a specific player", doTell})
+	addCommand("gossip", Command{"gossip", "communication", "Speak to all players on the server", (*Player).doGossip})
+	addCommand("shout", Command{"shout", "communication", "Speak to all players in the current zone", (*Player).doShout})
+	addCommand("say", Command{"say", "communication", "Speak to all players in the current room", (*Player).doSay})
+	addCommand("tell", Command{"tell", "communication", "Speak privately to a specific player", (*Player).doTell})
 	// Emotes
-	addCommand("poke", Command{"poke", "communication", "Poke a player", doPoke})
-	addCommand("laugh", Command{"laugh", "emotes", "Laugh at a player, or in general", doLaugh})
-	addCommand("sigh", Command{"sigh", "emotes", "Sigh at a player, or in general", doSigh})
-	addCommand("smile", Command{"smile", "emotes", "Smile at a player, or in general", doSmile})
-	addCommand("scowl", Command{"scowl", "emotes", "Scowl at a player, or in general", doScowl})
-	addCommand("think", Command{"think", "emotes", "Put on your thinking cap", doThink})
+	addCommand("poke", Command{"poke", "communication", "Poke a player", (*Player).doPoke})
+	addCommand("laugh", Command{"laugh", "emotes", "Laugh at a player, or in general", (*Player).doLaugh})
+	addCommand("sigh", Command{"sigh", "emotes", "Sigh at a player, or in general", (*Player).doSigh})
+	addCommand("smile", Command{"smile", "emotes", "Smile at a player, or in general", (*Player).doSmile})
+	addCommand("scowl", Command{"scowl", "emotes", "Scowl at a player, or in general", (*Player).doScowl})
+	addCommand("think", Command{"think", "emotes", "Put on your thinking cap", (*Player).doThink})
 	// Special
-	c := Command{"quit", "special", "Leave the MUD", doQuit}
+	c := Command{"quit", "special", "Leave the MUD", (*Player).doQuit}
 	addCommand("quit", c)
 	addCommand("exit", c)
 }
@@ -119,34 +119,34 @@ func addCommand(alias string, cmd Command) {
 
 // Navigation
 
-func doRecall(p *Player, _ string) {
+func (p *Player) doRecall(_ string) {
 	fmt.Fprint(p.Conn, "You head back to the Temple of Midgard...\n\n")
 	p.moveToRoom(rooms[3001])
 }
 
 // Navigation
 
-func doNorth(p *Player, _ string) {
-	moveDirection(p, 0)
+func (p *Player) doNorth(_ string) {
+	p.moveDirection(0)
 }
-func doEast(p *Player, _ string) {
-	moveDirection(p, 1)
+func (p *Player) doEast(_ string) {
+	p.moveDirection(1)
 }
-func doWest(p *Player, _ string) {
-	moveDirection(p, 2)
+func (p *Player) doWest(_ string) {
+	p.moveDirection(2)
 }
-func doSouth(p *Player, _ string) {
-	moveDirection(p, 3)
+func (p *Player) doSouth(_ string) {
+	p.moveDirection(3)
 }
-func doUp(p *Player, _ string) {
-	moveDirection(p, 4)
+func (p *Player) doUp(_ string) {
+	p.moveDirection(4)
 }
-func doDown(p *Player, _ string) {
-	moveDirection(p, 5)
+func (p *Player) doDown(_ string) {
+	p.moveDirection(5)
 }
 
 // Make sure it is a valid direction
-func moveDirection(p *Player, dir int) {
+func (p *Player) moveDirection(dir int) {
 	if exit := p.Room.Exits[dir]; exit.To != nil {
 		p.moveToRoom(exit.To)
 	} else {
@@ -171,17 +171,17 @@ func (p *Player) moveToRoom(r *Room) {
 
 	p.Room.sortPlayers()
 
-	printLocation(p)
+	p.printLocation()
 }
 
 // Information
 
-func doLook(p *Player, direction string) {
+func (p *Player) doLook(direction string) {
 	if len(direction) == 0 {
-		printLocation(p)
+		p.printLocation()
 	} else {
 		if fullDir, exists := dirs[direction]; exists {
-			lookDirection(p, fullDir)
+			p.lookDirection(fullDir)
 		} else {
 			fmt.Fprintln(p.Conn, "Usage: look <north|south|east|west|up|down>")
 		}
@@ -189,7 +189,7 @@ func doLook(p *Player, direction string) {
 }
 
 // Prints current room description and available exits
-func printLocation(p *Player) {
+func (p *Player) printLocation() {
 	fmt.Fprintln(p.Conn, p.Room.Name+"\n")
 	fmt.Fprintln(p.Conn, p.Room.Description)
 	// Print exits
@@ -210,7 +210,7 @@ func printLocation(p *Player) {
 	fmt.Fprintf(p.Conn, "]\n\n")
 }
 
-func lookDirection(p *Player, dir string) {
+func (p *Player) lookDirection(dir string) {
 	if exit := p.Room.Exits[dirRuneToInt[rune(strings.ToLower(dir)[0])]]; exit.To != nil {
 		fmt.Fprint(p.Conn, exit.Description)
 	} else {
@@ -220,7 +220,7 @@ func lookDirection(p *Player, dir string) {
 }
 
 // Print all players in the current zone and their corresponding room
-func doWhere(p *Player, _ string) {
+func (p *Player) doWhere(_ string) {
 	fmt.Fprintf(p.Conn, "%s\n+%s+\n", centerText(p.Zone.Name, 60, ' '), strings.Repeat("-", 61))
 	fmt.Fprintf(p.Conn, "|%s|%s|\n", centerText("PLAYER", 20, ' '), centerText("ROOM", 40, ' '))
 	fmt.Fprintf(p.Conn, "+%s+\n", strings.Repeat("-", 61))
@@ -235,7 +235,7 @@ func doWhere(p *Player, _ string) {
 }
 
 // Lists known aliases for commands
-func doListCommands(p *Player, _ string) {
+func (p *Player) doListCommands(_ string) {
 	fmt.Fprintf(p.Conn, "+%s+\n", strings.Repeat("-", 30))
 	fmt.Fprintf(p.Conn, "|%s|\n", centerText("COMMANDS LIST", 30, ' '))
 	fmt.Fprintf(p.Conn, "+%s+\n", strings.Repeat("-", 30))
@@ -307,35 +307,54 @@ func doListCommands(p *Player, _ string) {
 // Communication
 
 // Speak to all players on server
-func doGossip(p *Player, msg string) {
-	serverCommand(p, fmt.Sprintf("%s gossips: %s", p.Name, msg), fmt.Sprintf("You gossip: %s", msg))
+func (p *Player) doGossip(msg string) {
+	p.serverCommand(
+		fmt.Sprintf("%s gossips: %s", p.Name, msg),
+		fmt.Sprintf("You gossip: %s", msg),
+	)
 }
 
 // Speak to all players in a zone
-func doShout(p *Player, msg string) {
-	zoneCommand(p, fmt.Sprintf("%s shouts: %s", p.Name, msg), fmt.Sprintf("You shout: %s", msg))
+func (p *Player) doShout(msg string) {
+	p.zoneCommand(
+		fmt.Sprintf("%s shouts: %s", p.Name, msg),
+		fmt.Sprintf("You shout: %s", msg),
+	)
 }
 
 // Speak to all players in a room
-func doSay(p *Player, msg string) {
-	roomCommand(p, fmt.Sprintf("%s says: %s", p.Name, msg), fmt.Sprintf("You say: %s", msg))
+func (p *Player) doSay(msg string) {
+	p.roomCommand(
+		fmt.Sprintf("%s says: %s", p.Name, msg),
+		fmt.Sprintf("You say: %s", msg),
+	)
 }
 
 // Sends a message to specific player, regardless of where they are
-func doTell(p *Player, cmd string) {
+func (p *Player) doTell(cmd string) {
 	if words := strings.Fields(cmd); len(words) > 1 {
 		name := words[0]
 		msg := strings.Join(words[1:], " ")
-		targetedServerCommand(p, name, fmt.Sprintf("%s tells you: %s\n", p.Name, msg), fmt.Sprintf("You tell %s: %s\n", name, msg), "You know talking to yourself is a sign of insanity, right?")
+		p.targetedServerCommand(
+			name,
+			fmt.Sprintf("%s tells you: %s\n", p.Name, msg),
+			fmt.Sprintf("You tell %s: %s\n", name, msg),
+			"You know talking to yourself is a sign of insanity, right?",
+		)
 	} else {
 		fmt.Fprintln(p.Conn, "Usage: tell <Player Name> <Message>")
 	}
 }
 
-func doPoke(p *Player, cmd string) {
+func (p *Player) doPoke(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 1 {
 		name := words[0]
-		targetedRoomCommand(p, name, fmt.Sprintf("%s poked you!", p.Name), fmt.Sprintf("You poke %s", name), "Why are you poking yourself...")
+		p.targetedRoomCommand(
+			name,
+			fmt.Sprintf("%s poked you!", p.Name),
+			fmt.Sprintf("You poke %s", name),
+			"Why are you poking yourself...",
+		)
 	} else {
 		fmt.Fprintln(p.Conn, "Usage: poke <Player Name>")
 	}
@@ -343,53 +362,76 @@ func doPoke(p *Player, cmd string) {
 
 // Emotes
 
-func doSmile(p *Player, cmd string) {
+func (p *Player) doSmile(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 0 {
-		roomCommand(p, fmt.Sprintf("%s smiles happily", p.Name), "You smile happily")
+		p.roomCommand(fmt.Sprintf("%s smiles happily", p.Name), "You smile happily")
 	} else if len(words) == 1 {
 		name := words[0]
-		targetedRoomCommand(p, name, fmt.Sprintf("%s smiles at you.", p.Name), fmt.Sprintf("You smile at %s.", name), "You smile ... at yourself?")
+		p.targetedRoomCommand(
+			name,
+			fmt.Sprintf("%s smiles at you.", p.Name),
+			fmt.Sprintf("You smile at %s.", name),
+			"You smile ... at yourself?",
+		)
 	} else {
 		fmt.Fprintln(p.Conn, "Usage: smile <?Player Name>")
 	}
 }
 
-func doScowl(p *Player, cmd string) {
+func (p *Player) doScowl(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 0 {
-		roomCommand(p, fmt.Sprintf("%s scowls angrily.", p.Name), "You scowl angrily")
+		p.roomCommand(fmt.Sprintf("%s scowls angrily.", p.Name), "You scowl angrily")
 	} else if len(words) == 1 {
 		name := words[0]
-		targetedRoomCommand(p, name, fmt.Sprintf("%s scowls at you.", p.Name), fmt.Sprintf("You scowl at %s.", name), "You must really hate yourself...")
+		p.targetedRoomCommand(
+			name,
+			fmt.Sprintf("%s scowls at you.", p.Name),
+			fmt.Sprintf("You scowl at %s.", name),
+			"You must really hate yourself...",
+		)
 	} else {
 		fmt.Fprintln(p.Conn, "Usage: scowl <?Player Name>")
 	}
 }
 
-func doSigh(p *Player, cmd string) {
+func (p *Player) doSigh(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 0 {
-		roomCommand(p, fmt.Sprintf("%s sighs heavily", p.Name), "You sigh heavily")
+		p.roomCommand(fmt.Sprintf("%s sighs heavily", p.Name), "You sigh heavily")
 	} else if len(words) == 1 {
 		name := words[0]
-		targetedRoomCommand(p, name, fmt.Sprintf("%s sighs at you.", p.Name), fmt.Sprintf("You sigh at %s.", name), "Rough day, huh?")
+		p.targetedRoomCommand(
+			name,
+			fmt.Sprintf("%s sighs at you.", p.Name),
+			fmt.Sprintf("You sigh at %s.", name),
+			"Rough day, huh?",
+		)
 	} else {
 		fmt.Fprintln(p.Conn, "Usage: sigh <?Player Name>")
 	}
 }
 
-func doLaugh(p *Player, cmd string) {
+func (p *Player) doLaugh(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 0 {
-		roomCommand(p, fmt.Sprintf("%s laughs heartily", p.Name), "You laugh heartily")
+		p.roomCommand(fmt.Sprintf("%s laughs heartily", p.Name), "You laugh heartily")
 	} else if len(words) == 1 {
 		name := words[0]
-		targetedRoomCommand(p, name, fmt.Sprintf("%s laughs at you.", p.Name), fmt.Sprintf("You laugh at %s.", name), "It's always good to be able to laugh at yourself")
+		p.targetedRoomCommand(
+			name,
+			fmt.Sprintf("%s laughs at you.", p.Name),
+			fmt.Sprintf("You laugh at %s.", name),
+			"It's always good to be able to laugh at yourself",
+		)
 	} else {
 		fmt.Fprintln(p.Conn, "Usage: laugh <?Player Name>")
 	}
 }
 
-func doThink(p *Player, cmd string) {
+func (p *Player) doThink(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 0 {
-		roomCommand(p, fmt.Sprintf("%s is in deep thought", p.Name), "You are in deep thought")
+		p.roomCommand(
+			fmt.Sprintf("%s is in deep thought", p.Name),
+			"You are in deep thought",
+		)
 	} else {
 		fmt.Fprintln(p.Conn, "Usage: think")
 	}
@@ -397,7 +439,7 @@ func doThink(p *Player, cmd string) {
 
 // Special
 
-func doQuit(p *Player, _ string) {
+func (p *Player) doQuit(_ string) {
 	fmt.Fprintf(p.Conn, "Goodbye %s!\n", p.Name)
 	p.disconnect()
 }
@@ -405,7 +447,7 @@ func doQuit(p *Player, _ string) {
 // Helper functions
 
 // Represents a command that targets another player in the room
-func targetedRoomCommand(p *Player, name string, outMsg string, selfMsg string, errSelf string) {
+func (p *Player) targetedRoomCommand(name string, outMsg string, selfMsg string, errSelf string) {
 	if idx := index(len(p.Room.Players), func(i int) bool { return p.Room.Players[i].Name == name }); idx != -1 {
 		other := p.Room.Players[idx]
 		if other != p {
@@ -420,7 +462,7 @@ func targetedRoomCommand(p *Player, name string, outMsg string, selfMsg string, 
 }
 
 // Represents a command that targets another player cross-server
-func targetedServerCommand(p *Player, name string, outMsg string, selfMsg string, errSelf string) {
+func (p *Player) targetedServerCommand(name string, outMsg string, selfMsg string, errSelf string) {
 	if other, exists := players[name]; exists {
 		if other != p {
 			other.Chan <- Output{p, outMsg}
@@ -434,7 +476,7 @@ func targetedServerCommand(p *Player, name string, outMsg string, selfMsg string
 }
 
 // A command that affects everyone in the room
-func roomCommand(p *Player, outMsg string, selfMsg string) {
+func (p *Player) roomCommand(outMsg string, selfMsg string) {
 	for _, other := range p.Room.Players {
 		if other != p {
 			if ch := other.Chan; ch != nil {
@@ -447,7 +489,7 @@ func roomCommand(p *Player, outMsg string, selfMsg string) {
 }
 
 // A command that affects everyone in the zone
-func zoneCommand(p *Player, outMsg string, selfMsg string) {
+func (p *Player) zoneCommand(outMsg string, selfMsg string) {
 	for _, other := range p.Zone.Players {
 		if other != p {
 			if ch := other.Chan; ch != nil {
@@ -460,7 +502,7 @@ func zoneCommand(p *Player, outMsg string, selfMsg string) {
 }
 
 // A command that affects everyone in the server
-func serverCommand(p *Player, outMsg string, selfMsg string) {
+func (p *Player) serverCommand(outMsg string, selfMsg string) {
 	for _, other := range players {
 		if other != p {
 			if ch := other.Chan; ch != nil {

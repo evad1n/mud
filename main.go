@@ -3,7 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
+	"strings"
+	"time"
 )
 
 const (
@@ -46,17 +49,26 @@ func main() {
 		// Get input
 		ev := <-in
 		// Check for closed connection
-		if ev.Command.Category == "END_CONN" {
+		if ev.End {
 			if ev.Player.Chan != nil {
 				ev.Player.disconnect()
 			}
 			// Already shutting down -> ignore
 			continue
 		}
-		// serverLog to server
-		eventLog.Printf("PLAYER: %s | COMMAND: %s | PARAMS: %s\n", ev.Player.Name, ev.Command.Name, ev.Params)
-		// Run command
-		ev.Command.Run(ev.Player, ev.Params)
+		// Otherwise process commands
+		if words := strings.Fields(ev.Text); len(words) > 0 {
+			// Check if cmd exists
+			if validCmd, exists := commands[strings.ToLower(words[0])]; exists {
+				params := strings.Join(words[1:], " ")
+				// Log to server
+				eventLog.Printf("PLAYER: %s | COMMAND: %s | PARAMS: %s\n", ev.Player.Name, validCmd.Name, params)
+				// Actually run the command
+				validCmd.Run(ev.Player, params)
+			} else {
+				fmt.Fprintln(ev.Player.Conn, "Unrecognized command!")
+			}
+		}
 		// Prompt
 		fmt.Fprintf(ev.Player.Conn, "\n>>> ")
 	}
@@ -69,4 +81,26 @@ func initWorld() {
 	if err := loadDB(); err != nil {
 		serverLog.Fatal(err)
 	}
+}
+
+// Create a player and add it to the global players map
+func createPlayer(name string, conn net.Conn, log *log.Logger, out chan Output) (*Player, error) {
+	if _, exists := players[name]; exists {
+		return nil, fmt.Errorf("That username is taken")
+	}
+	player := &Player{
+		Name:  name,
+		Conn:  conn,
+		Log:   log,
+		Chan:  out,
+		Begin: time.Now(),
+		Zone:  rooms[3001].Zone,
+		Room:  rooms[3001],
+	}
+	// Add to data
+	players[player.Name] = player
+	player.Zone.Players = append(player.Zone.Players, player)
+	player.Room.Players = append(player.Room.Players, player)
+
+	return player, nil
 }
