@@ -3,6 +3,8 @@ Mult-user dungeon written in Go
 
 ## Start server
 
+Must be in same directory as `world.db` file
+
 ```bash
 go build && ./mud
 ```

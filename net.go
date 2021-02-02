@@ -95,7 +95,7 @@ func handleConnection(conn net.Conn, in chan Input) {
 func (p *Player) listenMUD() {
 	defer p.Conn.Close()
 	for ev := range p.Chan {
-		fmt.Fprintln(p.Conn)
+		fmt.Fprintf(p.Conn, "\n\n")
 		fmt.Fprintln(p.Conn, ev.Effect)
 		// Prompt
 		fmt.Fprintf(p.Conn, "\n>>> ")
@@ -115,7 +115,7 @@ func (p *Player) disconnect() {
 	close(p.Chan)
 	p.Chan = nil
 	// Remove player
-	players[p.Name] = nil
+	delete(players, p.Name)
 	// Log to server
 	serverLog.Printf("Player '%s' disconnected from %s\n", p.Name, p.Conn.RemoteAddr().String())
 	// Connection will automatically close after channel is closed
