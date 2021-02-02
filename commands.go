@@ -369,8 +369,8 @@ func (p *Player) doSmile(cmd string) {
 		name := words[0]
 		p.targetedRoomCommand(
 			name,
-			fmt.Sprintf("%s smiles at you.", p.Name),
-			fmt.Sprintf("You smile at %s.", name),
+			fmt.Sprintf("%s smiles at you", p.Name),
+			fmt.Sprintf("You smile at %s", name),
 			"You smile ... at yourself?",
 		)
 	} else {
@@ -385,8 +385,8 @@ func (p *Player) doScowl(cmd string) {
 		name := words[0]
 		p.targetedRoomCommand(
 			name,
-			fmt.Sprintf("%s scowls at you.", p.Name),
-			fmt.Sprintf("You scowl at %s.", name),
+			fmt.Sprintf("%s scowls at you", p.Name),
+			fmt.Sprintf("You scowl at %s", name),
 			"You must really hate yourself...",
 		)
 	} else {
@@ -401,8 +401,8 @@ func (p *Player) doSigh(cmd string) {
 		name := words[0]
 		p.targetedRoomCommand(
 			name,
-			fmt.Sprintf("%s sighs at you.", p.Name),
-			fmt.Sprintf("You sigh at %s.", name),
+			fmt.Sprintf("%s sighs at you", p.Name),
+			fmt.Sprintf("You sigh at %s", name),
 			"Rough day, huh?",
 		)
 	} else {
@@ -417,8 +417,8 @@ func (p *Player) doLaugh(cmd string) {
 		name := words[0]
 		p.targetedRoomCommand(
 			name,
-			fmt.Sprintf("%s laughs at you.", p.Name),
-			fmt.Sprintf("You laugh at %s.", name),
+			fmt.Sprintf("%s laughs at you", p.Name),
+			fmt.Sprintf("You laugh at %s", name),
 			"It's always good to be able to laugh at yourself",
 		)
 	} else {
@@ -440,7 +440,8 @@ func (p *Player) doThink(cmd string) {
 // Special
 
 func (p *Player) doQuit(_ string) {
-	fmt.Fprintf(p.Conn, "Goodbye %s!\n", p.Name)
+	fmt.Fprint(p.Conn, "\x1b[2J")
+	fmt.Fprintf(p.Conn, "Goodbye %s!\nThanks for playing!\n\n", p.Name)
 	p.disconnect()
 }
 

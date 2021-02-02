@@ -75,7 +75,7 @@ func handleConnection(conn net.Conn, in chan Input) {
 	go player.listenMUD()
 
 	// Initial prompt
-	fmt.Fprintf(conn, "\n>>> ")
+	player.prompt()
 	for scanner.Scan() {
 		// Add a newline after commands
 		fmt.Fprintln(conn)
@@ -95,12 +95,12 @@ func handleConnection(conn net.Conn, in chan Input) {
 func (p *Player) listenMUD() {
 	defer p.Conn.Close()
 	for ev := range p.Chan {
-		fmt.Fprintf(p.Conn, "\n\n")
+		// Erase old prompt
+		p.erasePrompt()
 		fmt.Fprintln(p.Conn, ev.Effect)
-		// Prompt
-		fmt.Fprintf(p.Conn, "\n>>> ")
+		// New prompt
+		fmt.Fprintf(p.Conn, "------------------------------------\n>>> ")
 	}
-	fmt.Fprintf(p.Conn, "\n\n")
 	p.Log.Printf("Disconnected from MUD server on %s:%s\n", serverAddress, port)
 	playTime := time.Now().Sub(p.Begin)
 	h, m := int(math.Round(playTime.Hours())), int(math.Round(playTime.Minutes()))%60

@@ -21,6 +21,19 @@ var (
 	players map[string]*Player
 )
 
+// Erase player's old prompt
+func (p *Player) erasePrompt() {
+	// Move up 3 lines and then clear to bottom
+	fmt.Fprint(p.Conn, "\x1b[3A\x1b[1000D\x1b[0J")
+	// Move back to bottom
+	fmt.Fprint(p.Conn, "\x1b[1B")
+}
+
+// Display player command prompt
+func (p *Player) prompt() {
+	fmt.Fprintf(p.Conn, "%s\n>>> ", strings.Repeat("_", 40))
+}
+
 func main() {
 	// Get local IP
 	serverAddress = getLocalAddress()
@@ -48,6 +61,8 @@ func main() {
 	for {
 		// Get input
 		ev := <-in
+		// Erase player's old prompt
+		ev.Player.erasePrompt()
 		// Check for closed connection
 		if ev.End {
 			if ev.Player.Chan != nil {
@@ -69,8 +84,11 @@ func main() {
 				fmt.Fprintln(ev.Player.Conn, "Unrecognized command!")
 			}
 		}
-		// Prompt
-		fmt.Fprintf(ev.Player.Conn, "\n>>> ")
+		// Show another prompt if player is still playing
+		if ev.Player.Chan != nil {
+			ev.Player.prompt()
+		}
+
 	}
 }
 
