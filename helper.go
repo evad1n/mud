@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"sort"
 	"strings"
@@ -95,4 +96,24 @@ func getLocalAddress() string {
 	}
 
 	return localaddress
+}
+
+// IO manip
+
+// Erase player's old prompt
+func (p *player) erasePrompt() {
+	// Move up 3 lines and then clear to bottom
+	fmt.Fprint(p.conn, "\x1b[2A\x1b[1000D\x1b[0J")
+	// Move back to bottom
+	fmt.Fprint(p.conn, "\x1b[1B")
+}
+
+// Display player command prompt
+func (p *player) prompt() {
+	fmt.Fprintf(p.conn, "%s\n>>> ", strings.Repeat("_", 40))
+}
+
+// Wrap some text in an ansi code
+func ansiWrap(text string, code string) string {
+	return fmt.Sprintf("%s%s\x1b[0m", code, text)
 }

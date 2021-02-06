@@ -13,10 +13,10 @@ import (
 // Listen for incoming client connections
 func listenConnections(inputs chan input) {
 	server, err := net.Listen("tcp", ":"+port)
-	defer server.Close()
 	if err != nil {
 		serverLog.Fatalf("Error starting server on port %s: %v", port, err)
 	}
+	defer server.Close()
 	for {
 		conn, err := server.Accept()
 		if err != nil {
@@ -63,24 +63,24 @@ func handleConnection(conn net.Conn, inputs chan input) {
 		}
 		p, err = createPlayer(name, conn, clientLog, out)
 	}
+	// Player object is initialized
+	go p.listenMUD()
 
-	fmt.Fprintf(conn, "\nHello, %s! Welcome to MUD!\n\n\n", p.name)
+	fmt.Fprintf(p.conn, "\nHello, %s! Welcome to MUD!\n\n\n", p.name)
 
 	serverLog.Printf("player '%s' joined the MUD from %s", p.name, conn.RemoteAddr().String())
 
 	time.Sleep(1 * time.Second)
 
 	p.printLocation()
-	fmt.Fprintln(conn, "Type 'help' to see all available commands!")
 
-	go p.listenMUD()
+	p.events <- event{
+		player: p,
+		output: "Type 'help' to see all available commands!",
+	}
 
-	// Initial prompt
-	p.prompt()
 	for scanner.Scan() {
-		// Add a newline after commands
-		fmt.Fprintln(conn)
-
+		// Send raw input as command to be parsed
 		inputs <- input{p, scanner.Text(), false}
 	}
 	if err := scanner.Err(); err != nil {
@@ -89,15 +89,15 @@ func handleConnection(conn net.Conn, inputs chan input) {
 	}
 	// Connection has been closed
 	inputs <- input{p, "", true}
+	serverLog.Printf("player '%s' connection terminated\n", p.name)
 }
 
 // Have a client listen for mud events
 func (p *player) listenMUD() {
-	defer p.conn.Close()
 	for ev := range p.events {
 		// Erase old prompt
 		p.erasePrompt()
-		fmt.Fprintln(p.conn, ev.effect)
+		fmt.Fprintln(p.conn, ev.output)
 		// New prompt
 		p.prompt()
 	}
@@ -105,8 +105,6 @@ func (p *player) listenMUD() {
 	playTime := time.Now().Sub(p.beginTime)
 	h, m := int(math.Round(playTime.Hours())), int(math.Round(playTime.Minutes()))%60
 	p.log.Printf("You played for %d %s and %d %s", h, plural(h, "hour"), m, plural(m, "minute"))
-	// Close connection
-	serverLog.Printf("player '%s' connection terminated\n", p.name)
 }
 
 // Terminate a connection

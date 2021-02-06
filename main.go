@@ -17,22 +17,8 @@ var (
 	serverAddress string
 	serverLog     *log.Logger
 	eventLog      *log.Logger
-	// All players on the server
-	players map[string]*player
+	players       map[string]*player // All players on the server
 )
-
-// Erase player's old prompt
-func (p *player) erasePrompt() {
-	// Move up 3 lines and then clear to bottom
-	fmt.Fprint(p.conn, "\x1b[3A\x1b[1000D\x1b[0J")
-	// Move back to bottom
-	fmt.Fprint(p.conn, "\x1b[1B")
-}
-
-// Display player command prompt
-func (p *player) prompt() {
-	fmt.Fprintf(p.conn, "%s\n>>> ", strings.Repeat("_", 40))
-}
 
 func main() {
 	// Get local IP
@@ -88,7 +74,6 @@ func main() {
 		if ev.player.events != nil {
 			ev.player.prompt()
 		}
-
 	}
 }
 

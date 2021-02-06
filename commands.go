@@ -6,11 +6,22 @@ import (
 	"strings"
 )
 
+// Command category enums
+// This also defines precedence when listing in 'help' command
+const (
+	nav commandCategory = iota
+	info
+	comm
+	emotes
+	special
+)
+
 var (
-	commands     map[string]command // Map of command aliases to commands
-	dirs         map[string]string  // Direction abbreviations
-	dirRuneToInt map[rune]int       // Maps the exit direction string to its place in the room exit array
-	dirIntToRune map[int]rune       // Maps a place in the room exit array to a direction abbreviation rune
+	commands           map[string]command         // Map of command aliases to commands
+	commandCategoryMap map[commandCategory]string // Maps commandCategory enums to string descriptions
+	dirs               map[string]string          // Direction abbreviations
+	dirRuneToInt       map[rune]int               // Maps the exit direction string to its place in the room exit array
+	dirIntToRune       map[int]rune               // Maps a place in the room exit array to a direction abbreviation rune
 )
 
 // Initialize and populate lookup tables
@@ -40,6 +51,14 @@ func createMaps() {
 	dirIntToRune[3] = 's'
 	dirIntToRune[4] = 'u'
 	dirIntToRune[5] = 'd'
+
+	// Command categories
+	commandCategoryMap = make(map[commandCategory]string)
+	commandCategoryMap[nav] = "navigation"
+	commandCategoryMap[info] = "information"
+	commandCategoryMap[comm] = "communication"
+	commandCategoryMap[emotes] = "emotes"
+	commandCategoryMap[special] = "special"
 }
 
 /* Maps prefixes to full name for a map */
@@ -63,31 +82,136 @@ func defaultCommands() {
 	// In order of precedence
 
 	// Navigation
-	addCommand("north", command{"north", "navigation", "Move north", (*player).doNorth})
-	addCommand("south", command{"south", "navigation", "Move south", (*player).doSouth})
-	addCommand("east", command{"east", "navigation", "Move east", (*player).doEast})
-	addCommand("west", command{"west", "navigation", "Move west", (*player).doWest})
-	addCommand("up", command{"up", "navigation", "Move up", (*player).doUp})
-	addCommand("down", command{"down", "navigation", "Move down", (*player).doDown})
-	addCommand("recall", command{"recall", "navigation", "Return to the Temple of Midgaard", (*player).doRecall})
+	addCommand("north", command{
+		name:        "north",
+		category:    nav,
+		description: "Move north",
+		run:         (*player).doNorth,
+	})
+	addCommand("south", command{
+		name:        "south",
+		category:    nav,
+		description: "Move south",
+		run:         (*player).doSouth,
+	})
+	addCommand("east", command{
+		name:        "east",
+		category:    nav,
+		description: "Move east",
+		run:         (*player).doEast,
+	})
+	addCommand("west", command{
+		name:        "west",
+		category:    nav,
+		description: "Move west",
+		run:         (*player).doWest,
+	})
+	addCommand("up", command{
+		name:        "up",
+		category:    nav,
+		description: "Move up",
+		run:         (*player).doUp,
+	})
+	addCommand("down", command{
+		name:        "down",
+		category:    nav,
+		description: "Move down",
+		run:         (*player).doDown,
+	})
+	addCommand("recall", command{
+		name:        "recall",
+		category:    nav,
+		description: "Return to the Temple of Midgaard",
+		run:         (*player).doRecall,
+	})
 	// Information
-	addCommand("look", command{"look", "information", "Look around or in a specific direction", (*player).doLook})
-	addCommand("where", command{"where", "information", "Display names and locations of all players in current zone", (*player).doWhere})
-	addCommand("help", command{"help", "information", "List all commands", (*player).doListCommands})
+	addCommand("look", command{
+		name:        "look",
+		category:    info,
+		description: "Look around or in a specific direction",
+		run:         (*player).doLook,
+	})
+	addCommand("where", command{
+		name:        "where",
+		category:    info,
+		description: "Display names and locations of all players in current zone",
+		run:         (*player).doWhere,
+	})
+	addCommand("help", command{
+		name:        "help",
+		category:    info,
+		description: "List all commands",
+		run:         (*player).doListCommands,
+	})
 	// Communication
-	addCommand("gossip", command{"gossip", "communication", "Speak to all players on the server", (*player).doGossip})
-	addCommand("shout", command{"shout", "communication", "Speak to all players in the current zone", (*player).doShout})
-	addCommand("say", command{"say", "communication", "Speak to all players in the current room", (*player).doSay})
-	addCommand("tell", command{"tell", "communication", "Speak privately to a specific player", (*player).doTell})
+	addCommand("gossip", command{
+		name:        "gossip",
+		category:    comm,
+		description: "Speak to all players on the server",
+		run:         (*player).doGossip,
+	})
+	addCommand("shout", command{
+		name:        "shout",
+		category:    comm,
+		description: "Speak to all players in the current zone",
+		run:         (*player).doShout,
+	})
+	addCommand("say", command{
+		name:        "say",
+		category:    comm,
+		description: "Speak to all players in the current room",
+		run:         (*player).doSay,
+	})
+	addCommand("tell", command{
+		name:        "tell",
+		category:    comm,
+		description: "Speak privately to a specific player",
+		run:         (*player).doTell,
+	})
 	// Emotes
-	addCommand("poke", command{"poke", "communication", "Poke a player", (*player).doPoke})
-	addCommand("laugh", command{"laugh", "emotes", "Laugh at a player, or in general", (*player).doLaugh})
-	addCommand("sigh", command{"sigh", "emotes", "Sigh at a player, or in general", (*player).doSigh})
-	addCommand("smile", command{"smile", "emotes", "Smile at a player, or in general", (*player).doSmile})
-	addCommand("scowl", command{"scowl", "emotes", "Scowl at a player, or in general", (*player).doScowl})
-	addCommand("think", command{"think", "emotes", "Put on your thinking cap", (*player).doThink})
+	addCommand("poke", command{
+		name:        "poke",
+		category:    comm,
+		description: "Poke a player",
+		run:         (*player).doPoke,
+	})
+	addCommand("laugh", command{
+		name:        "laugh",
+		category:    emotes,
+		description: "Laugh at a player, or in general",
+		run:         (*player).doLaugh,
+	})
+	addCommand("sigh", command{
+		name:        "sigh",
+		category:    emotes,
+		description: "Sigh at a player, or in general",
+		run:         (*player).doSigh,
+	})
+	addCommand("smile", command{
+		name:        "smile",
+		category:    emotes,
+		description: "Smile at a player, or in general",
+		run:         (*player).doSmile,
+	})
+	addCommand("scowl", command{
+		name:        "scowl",
+		category:    emotes,
+		description: "Scowl at a player, or in general",
+		run:         (*player).doScowl,
+	})
+	addCommand("think", command{
+		name:        "think",
+		category:    emotes,
+		description: "Put on your thinking cap",
+		run:         (*player).doThink,
+	})
 	// Special
-	c := command{"quit", "special", "Leave the MUD", (*player).doQuit}
+	c := command{
+		name:        "quit",
+		category:    special,
+		description: "Leave the MUD",
+		run:         (*player).doQuit,
+	}
 	addCommand("quit", c)
 	addCommand("exit", c)
 }
@@ -145,7 +269,10 @@ func (p *player) moveDirection(dir int) {
 	if exit := p.room.exits[dir]; exit.to != nil {
 		p.moveToRoom(exit.to)
 	} else {
-		fmt.Fprintln(p.conn, "You can't go that way...")
+		p.events <- event{
+			player: p,
+			output: "You can't go that way...",
+		}
 	}
 }
 
@@ -156,7 +283,10 @@ func (p *player) moveToRoom(r *room) {
 
 	// Notify other players in room
 	for _, other := range r.players {
-		other.events <- event{p, fmt.Sprintf("%s has entered the room.", p.name)}
+		other.events <- event{
+			player: p,
+			output: fmt.Sprintf("%s has entered the room.", p.name),
+		}
 	}
 
 	p.room = r
@@ -178,67 +308,89 @@ func (p *player) doLook(direction string) {
 		if fullDir, exists := dirs[direction]; exists {
 			p.lookDirection(fullDir)
 		} else {
-			fmt.Fprintln(p.conn, "Usage: look <north|south|east|west|up|down>")
+			p.events <- event{
+				player: p,
+				output: "Usage: look <north|south|east|west|up|down>",
+			}
 		}
 	}
 }
 
 // Prints current room description and available exits
 func (p *player) printLocation() {
-	fmt.Fprintln(p.conn, p.room.name+"\n")
-	fmt.Fprintln(p.conn, p.room.description)
-	// Print exits
-	fmt.Fprintf(p.conn, "EXITS: [ ")
+	output := ""
+	output += (p.room.name + "\n\n")
+	output += p.room.description
+
+	// Show exits
+	output += "EXITS: [ "
 	for i, exit := range p.room.exits {
 		if exit.to != nil {
-			fmt.Fprintf(p.conn, "%c ", dirIntToRune[i])
+			output += fmt.Sprintf("%c ", dirIntToRune[i])
 		}
 	}
-	fmt.Fprintf(p.conn, "]\n\n")
-
-	fmt.Fprintf(p.conn, "PLAYERS: [ ")
+	output += "]\n\n"
+	// Show players
+	output += "PLAYERS: [ "
 	for _, other := range p.room.players {
 		if other != p {
-			fmt.Fprintf(p.conn, "%s ", other.name)
+			output += fmt.Sprintf("%s ", other.name)
 		}
 	}
-	fmt.Fprintf(p.conn, "]\n\n")
+	output += "]\n\n"
+	// Send formatted output to player
+	p.events <- event{
+		player: p,
+		output: output,
+	}
 }
 
 func (p *player) lookDirection(dir string) {
 	if exit := p.room.exits[dirRuneToInt[rune(strings.ToLower(dir)[0])]]; exit.to != nil {
-		fmt.Fprint(p.conn, exit.description)
+		p.events <- event{
+			player: p,
+			output: exit.description,
+		}
 	} else {
-		fmt.Fprintln(p.conn, "There's nothing there...")
+		p.events <- event{
+			player: p,
+			output: "There's nothing there...",
+		}
 	}
-
 }
 
 // Print all players in the current zone and their corresponding room
 func (p *player) doWhere(_ string) {
-	fmt.Fprintf(p.conn, "%s\n+%s+\n", centerText(p.zone.name, 60, ' '), strings.Repeat("-", 61))
-	fmt.Fprintf(p.conn, "|%s|%s|\n", centerText("PLAYER", 20, ' '), centerText("ROOM", 40, ' '))
-	fmt.Fprintf(p.conn, "+%s+\n", strings.Repeat("-", 61))
+	output := ""
+	output += fmt.Sprintf("%s\n+%s+\n", centerText(p.zone.name, 60, ' '), strings.Repeat("-", 61))
+	output += fmt.Sprintf("|%s|%s|\n", centerText("PLAYER", 20, ' '), centerText("ROOM", 40, ' '))
+	output += fmt.Sprintf("+%s+\n", strings.Repeat("-", 61))
 
 	p.zone.sortPlayers()
 
 	for _, other := range p.zone.players {
-		fmt.Fprintf(p.conn, "|%s|%s|\n", centerText(other.name, 20, ' '), centerText(other.room.name, 40, ' '))
+		output += fmt.Sprintf("|%s|%s|\n", centerText(other.name, 20, ' '), centerText(other.room.name, 40, ' '))
 	}
 
-	fmt.Fprintf(p.conn, "+%s+\n", strings.Repeat("-", 61))
+	output += fmt.Sprintf("+%s+", strings.Repeat("-", 61))
+	// Send formatted output to player
+	p.events <- event{
+		player: p,
+		output: output,
+	}
 }
 
 // Lists known aliases for commands
 func (p *player) doListCommands(_ string) {
-	fmt.Fprintf(p.conn, "+%s+\n", strings.Repeat("-", 30))
-	fmt.Fprintf(p.conn, "|%s|\n", centerText("COMMANDS LIST", 30, ' '))
-	fmt.Fprintf(p.conn, "+%s+\n", strings.Repeat("-", 30))
+	output := ""
+	output += fmt.Sprintf("+%s+\n", strings.Repeat("-", 30))
+	output += fmt.Sprintf("|%s|\n", centerText("COMMANDS LIST", 30, ' '))
+	output += fmt.Sprintf("+%s+\n", strings.Repeat("-", 30))
 
 	// Sort commands alphabetically by category, command name, then alias, in that order
 
 	// This seems unecessarily complex
-	categoryMap := make(map[string]map[string][]string)
+	categoryMap := make(map[commandCategory]map[string][]string)
 
 	for alias, cmd := range commands {
 		if _, exists := categoryMap[cmd.category]; !exists {
@@ -247,55 +399,72 @@ func (p *player) doListCommands(_ string) {
 		categoryMap[cmd.category][cmd.name] = append(categoryMap[cmd.category][cmd.name], alias)
 	}
 
-	type AliasList struct {
-		command command
-		Aliases []string
+	// All aliases associated with a command
+	type aliasList struct {
+		cmd     command
+		aliases []string
 	}
 
-	type category struct {
-		name     string
-		Commands []AliasList
+	// A list of commands belonging to a specific category
+	type commandList struct {
+		category commandCategory
+		commands []aliasList
 	}
 
-	categoryList := []category{}
+	categoryList := []commandList{}
 
-	for typeName, cmdMap := range categoryMap {
-		cmdList := category{typeName, []AliasList{}}
+	for category, cmdMap := range categoryMap {
+		cmdList := commandList{
+			category: category,
+			commands: []aliasList{},
+		}
 		for _, aliases := range cmdMap {
-			cmdList.Commands = append(cmdList.Commands, AliasList{commands[aliases[0]], aliases})
+			cmdList.commands = append(cmdList.commands, aliasList{commands[aliases[0]], aliases})
 		}
 		categoryList = append(categoryList, cmdList)
 	}
 
 	for _, cmdList := range categoryList {
 		// Sort individual groups
-		for _, aliasList := range cmdList.Commands {
-			sort.Strings(aliasList.Aliases)
+		for _, aliasList := range cmdList.commands {
+			sort.Strings(aliasList.aliases)
 		}
 		// Sort command list
-		sort.Slice(cmdList.Commands, func(i, j int) bool {
-			return cmdList.Commands[i].command.name < cmdList.Commands[j].command.name
+		sort.Slice(cmdList.commands, func(i, j int) bool {
+			return cmdList.commands[i].cmd.name < cmdList.commands[j].cmd.name
 		})
 	}
 
 	// Sort by type
 	sort.Slice(categoryList, func(i, j int) bool {
-		return categoryList[i].name < categoryList[j].name
+		return categoryList[i].category < categoryList[j].category
 	})
 
 	for _, category := range categoryList {
-		fmt.Fprintf(p.conn, "\n+%s+\n", centerText(strings.ToUpper(" "+category.name+" "), 30, '-'))
-		for _, aliasList := range category.Commands {
-			for i, alias := range aliasList.Aliases {
-				fmt.Fprintf(p.conn, "| %-10s -->     %-9s |", alias, aliasList.command.name)
+		output += fmt.Sprintf(
+			"\n+%s+\n",
+			centerText(
+				strings.ToUpper(" "+commandCategoryMap[category.category]+" "),
+				30,
+				'-',
+			),
+		)
+		for _, aliasList := range category.commands {
+			for i, alias := range aliasList.aliases {
+				output += fmt.Sprintf("| %-10s -->     %-9s |", alias, aliasList.cmd.name)
 				if i == 0 {
-					fmt.Fprintf(p.conn, " %-40s\n", aliasList.command.description)
+					output += fmt.Sprintf(" %-40s\n", aliasList.cmd.description)
 				} else {
-					fmt.Fprintf(p.conn, " %s\n", strings.Repeat(" ", 40))
+					output += fmt.Sprintf(" %s\n", strings.Repeat(" ", 40))
 				}
 			}
 		}
-		fmt.Fprintf(p.conn, "+%s+\n", strings.Repeat("-", 30))
+		output += fmt.Sprintf("+%s+", strings.Repeat("-", 30))
+	}
+	// Send formatted output to player
+	p.events <- event{
+		player: p,
+		output: output,
 	}
 }
 
@@ -337,7 +506,10 @@ func (p *player) doTell(cmd string) {
 			"You know talking to yourself is a sign of insanity, right?",
 		)
 	} else {
-		fmt.Fprintln(p.conn, "Usage: tell <player name> <Message>")
+		p.events <- event{
+			player: p,
+			output: "Usage: tell <player name> <Message>",
+		}
 	}
 }
 
@@ -351,7 +523,10 @@ func (p *player) doPoke(cmd string) {
 			"Why are you poking yourself...",
 		)
 	} else {
-		fmt.Fprintln(p.conn, "Usage: poke <player name>")
+		p.events <- event{
+			player: p,
+			output: "Usage: poke <?player name>",
+		}
 	}
 }
 
@@ -369,7 +544,11 @@ func (p *player) doSmile(cmd string) {
 			"You smile ... at yourself?",
 		)
 	} else {
-		fmt.Fprintln(p.conn, "Usage: smile <?player name>")
+		p.events <- event{
+			player: p,
+			output: "Usage: smile <?player name>",
+		}
+
 	}
 }
 
@@ -385,7 +564,10 @@ func (p *player) doScowl(cmd string) {
 			"You must really hate yourself...",
 		)
 	} else {
-		fmt.Fprintln(p.conn, "Usage: scowl <?player name>")
+		p.events <- event{
+			player: p,
+			output: "Usage: scowl <?player name>",
+		}
 	}
 }
 
@@ -401,7 +583,10 @@ func (p *player) doSigh(cmd string) {
 			"Rough day, huh?",
 		)
 	} else {
-		fmt.Fprintln(p.conn, "Usage: sigh <?player name>")
+		p.events <- event{
+			player: p,
+			output: "Usage: sigh <?player name>",
+		}
 	}
 }
 
@@ -417,7 +602,10 @@ func (p *player) doLaugh(cmd string) {
 			"It's always good to be able to laugh at yourself",
 		)
 	} else {
-		fmt.Fprintln(p.conn, "Usage: laugh <?player name>")
+		p.events <- event{
+			player: p,
+			output: "Usage: laugh <?player name>",
+		}
 	}
 }
 
@@ -428,14 +616,21 @@ func (p *player) doThink(cmd string) {
 			"You are in deep thought",
 		)
 	} else {
-		fmt.Fprintln(p.conn, "Usage: think")
+		p.events <- event{
+			player: p,
+			output: "Usage: think",
+		}
 	}
 }
 
 // Special
 
+// Disconnect the player gracefully
 func (p *player) doQuit(_ string) {
-	fmt.Fprintf(p.conn, "Goodbye %s!\nThanks for playing!\n\n", p.name)
+	p.events <- event{
+		player: p,
+		output: fmt.Sprintf("Goodbye %s!\nThanks for playing!\n\n", p.name),
+	}
 	p.disconnect()
 }
 
@@ -446,13 +641,25 @@ func (p *player) targetedRoomCommand(name string, outMsg string, selfMsg string,
 	if idx := index(len(p.room.players), func(i int) bool { return p.room.players[i].name == name }); idx != -1 {
 		other := p.room.players[idx]
 		if other != p {
-			other.events <- event{p, outMsg}
-			fmt.Fprintln(p.conn, selfMsg)
+			other.events <- event{
+				player: p,
+				output: outMsg,
+			}
+			p.events <- event{
+				player: p,
+				output: selfMsg,
+			}
 		} else {
-			fmt.Fprintln(p.conn, errSelf)
+			p.events <- event{
+				player: p,
+				output: errSelf,
+			}
 		}
 	} else {
-		fmt.Fprintln(p.conn, "No such player!")
+		p.events <- event{
+			player: p,
+			output: "No such player!",
+		}
 	}
 }
 
@@ -460,13 +667,25 @@ func (p *player) targetedRoomCommand(name string, outMsg string, selfMsg string,
 func (p *player) targetedServerCommand(name string, outMsg string, selfMsg string, errSelf string) {
 	if other, exists := players[name]; exists {
 		if other != p {
-			other.events <- event{p, outMsg}
-			fmt.Fprintln(p.conn, selfMsg)
+			other.events <- event{
+				player: p,
+				output: outMsg,
+			}
+			p.events <- event{
+				player: p,
+				output: selfMsg,
+			}
 		} else {
-			fmt.Fprintln(p.conn, errSelf)
+			p.events <- event{
+				player: p,
+				output: errSelf,
+			}
 		}
 	} else {
-		fmt.Fprintln(p.conn, "No such player!")
+		p.events <- event{
+			player: p,
+			output: "No such player!",
+		}
 	}
 }
 
@@ -475,10 +694,16 @@ func (p *player) roomCommand(outMsg string, selfMsg string) {
 	for _, other := range p.room.players {
 		if other != p {
 			if ch := other.events; ch != nil {
-				ch <- event{p, outMsg}
+				ch <- event{
+					player: p,
+					output: outMsg,
+				}
 			}
 		} else {
-			fmt.Fprintln(p.conn, selfMsg)
+			p.events <- event{
+				player: p,
+				output: selfMsg,
+			}
 		}
 	}
 }
@@ -488,10 +713,16 @@ func (p *player) zoneCommand(outMsg string, selfMsg string) {
 	for _, other := range p.zone.players {
 		if other != p {
 			if ch := other.events; ch != nil {
-				ch <- event{p, outMsg}
+				ch <- event{
+					player: p,
+					output: outMsg,
+				}
 			}
 		} else {
-			fmt.Fprintln(p.conn, selfMsg)
+			p.events <- event{
+				player: p,
+				output: selfMsg,
+			}
 		}
 	}
 }
@@ -501,10 +732,16 @@ func (p *player) serverCommand(outMsg string, selfMsg string) {
 	for _, other := range players {
 		if other != p {
 			if ch := other.events; ch != nil {
-				ch <- event{p, outMsg}
+				ch <- event{
+					player: p,
+					output: outMsg,
+				}
 			}
 		} else {
-			fmt.Fprintln(p.conn, selfMsg)
+			p.events <- event{
+				player: p,
+				output: selfMsg,
+			}
 		}
 	}
 }

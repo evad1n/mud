@@ -20,12 +20,14 @@ type (
 	// A command with all it's info, including linked function
 	command struct {
 		name        string
-		category    string      // The type of command
-		description string      // Short description of command
-		run         commandFunc // The linked function
+		category    commandCategory // The type of command
+		description string          // Short description of command
+		run         commandFunc     // The linked function
 	}
 
 	commandFunc func(*player, string) // A command run by a player
+
+	commandCategory int // A type of command
 
 	// Input represents an event going from the player to MUD
 	input struct {
@@ -36,8 +38,9 @@ type (
 
 	// Output represents an event going from MUD to the player
 	event struct {
-		player *player // The player who initiated the effect
-		effect string  // The effect to be printed to the recieving player
+		player   *player // The player who initiated the effect
+		output   string  // The string output to be printed to the recieving player
+		noPrompt bool    // Whether to print the prompt
 	}
 
 	// An area of the world
