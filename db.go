@@ -9,39 +9,39 @@ import (
 
 var (
 	db    *sql.DB
-	zones map[int]*Zone
-	rooms map[int]*Room
+	zones map[int]*zone
+	rooms map[int]*room
+)
+
+const (
+	path    = "world.db" // the path to the database--this could be an absolute path
+	options = "?" + "_busy_timeout=10000" +
+		"&" + "_foreign_keys=ON" +
+		"&" + "_journal_mode=WAL" +
+		"&" + "mode=rw" +
+		"&" + "_synchronous=NORMAL"
 )
 
 // Load all rooms, zones, exits and link them appropriately
-func loadDB() error {
-	// the path to the database--this could be an absolute path
-	path := "world.db"
-	options :=
-		"?" + "_busy_timeout=10000" +
-			"&" + "_foreign_keys=ON" +
-			"&" + "_journal_mode=WAL" +
-			"&" + "mode=rw" +
-			"&" + "_synchronous=NORMAL"
-
+func loadWorld() error {
 	var err error
 	db, err = sql.Open("sqlite3", path+options)
 	if err != nil {
-		return err
+		return fmt.Errorf("opening database: %v", err)
 	}
 	defer db.Close()
 
 	// Read zones
 	if err := readTransaction(readZones); err != nil {
-		return err
+		return fmt.Errorf("reading zones: %v", err)
 	}
 	// Read rooms
 	if err := readTransaction(readRooms); err != nil {
-		return err
+		return fmt.Errorf("reading rooms: %v", err)
 	}
 	// Read exits
 	if err := readTransaction(readExits); err != nil {
-		return err
+		return fmt.Errorf("reading exits: %v", err)
 	}
 
 	return nil
@@ -51,7 +51,7 @@ func loadDB() error {
 func readTransaction(f func(tx *sql.Tx) error) error {
 	tx, err := db.Begin()
 	if err != nil {
-		return err
+		return fmt.Errorf("starting transaction: %v", err)
 	}
 
 	if err := f(tx); err != nil {
@@ -60,7 +60,7 @@ func readTransaction(f func(tx *sql.Tx) error) error {
 
 	if err := tx.Commit(); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("committing transaction: %v", err)
 	}
 
 	return nil
@@ -70,25 +70,30 @@ func readTransaction(f func(tx *sql.Tx) error) error {
 func readZones(tx *sql.Tx) error {
 	rows, err := tx.Query("SELECT * FROM zones")
 	if err != nil {
-		return fmt.Errorf("reading a zone from the database: %v", err)
+		return fmt.Errorf("querying zones: %v", err)
 	}
 	defer rows.Close()
 
-	zones = make(map[int]*Zone)
+	zones = make(map[int]*zone)
 	for rows.Next() {
 		var (
-			ID   int
+			id   int
 			name string
 		)
-		if err := rows.Scan(&ID, &name); err != nil {
-			return fmt.Errorf("reading a zone from the database: %v", err)
+		if err := rows.Scan(&id, &name); err != nil {
+			return fmt.Errorf("reading a zone: %v", err)
 		}
 		// Store zone
-		zones[ID] = &Zone{ID: ID, Name: name, Rooms: []*Room{}, Players: []*Player{}}
+		zones[id] = &zone{
+			id:      id,
+			name:    name,
+			rooms:   []*room{},
+			players: []*player{},
+		}
 	}
 	// Check for errors from iterating over rows.
 	if err := rows.Err(); err != nil {
-		return fmt.Errorf("reading a zone from the database: %v", err)
+		return fmt.Errorf("iterating over zones: %v", err)
 	}
 
 	return nil
@@ -98,30 +103,36 @@ func readZones(tx *sql.Tx) error {
 func readRooms(tx *sql.Tx) error {
 	rows, err := tx.Query("SELECT * FROM rooms")
 	if err != nil {
-		return fmt.Errorf("reading a room from the database: %v", err)
+		return fmt.Errorf("querying rooms: %v", err)
 	}
 	defer rows.Close()
 
-	rooms = make(map[int]*Room)
+	rooms = make(map[int]*room)
 	for rows.Next() {
 		var (
-			ID     int
+			id     int
 			zoneID int
 			name   string
 			desc   string
 		)
-		if err = rows.Scan(&ID, &zoneID, &name, &desc); err != nil {
-			return fmt.Errorf("reading a room from the database: %v", err)
+		if err = rows.Scan(&id, &zoneID, &name, &desc); err != nil {
+			return fmt.Errorf("reading a room: %v", err)
 		}
 
 		// Store room
-		rooms[ID] = &Room{ID: ID, Zone: zones[zoneID], Name: name, Description: desc, Players: []*Player{}}
+		rooms[id] = &room{
+			id:          id,
+			zone:        zones[zoneID],
+			name:        name,
+			description: desc,
+			players:     []*player{},
+		}
 		// Link to zone
-		zones[zoneID].Rooms = append(zones[zoneID].Rooms, rooms[ID])
+		zones[zoneID].rooms = append(zones[zoneID].rooms, rooms[id])
 	}
 	// Check for errors from iterating over rows.
 	if err := rows.Err(); err != nil {
-		return fmt.Errorf("reading a room from the database: %v", err)
+		return fmt.Errorf("iterating over rooms: %v", err)
 	}
 
 	return nil
@@ -131,7 +142,7 @@ func readRooms(tx *sql.Tx) error {
 func readExits(tx *sql.Tx) error {
 	rows, err := tx.Query("SELECT * FROM exits")
 	if err != nil {
-		return fmt.Errorf("reading an exit from the database: %v", err)
+		return fmt.Errorf("querying exits: %v", err)
 	}
 	defer rows.Close()
 
@@ -143,14 +154,17 @@ func readExits(tx *sql.Tx) error {
 			desc   string
 		)
 		if err := rows.Scan(&fromID, &toID, &dir, &desc); err != nil {
-			return fmt.Errorf("reading an exit from the database: %v", err)
+			return fmt.Errorf("reading an exit: %v", err)
 		}
 		// Link exit to room
-		rooms[fromID].Exits[dirRuneToInt[rune(dir[0])]] = Exit{To: rooms[toID], Description: desc}
+		rooms[fromID].exits[dirRuneToInt[rune(dir[0])]] = exit{
+			to:          rooms[toID],
+			description: desc,
+		}
 	}
 	// Check for errors from iterating over rows.
 	if err := rows.Err(); err != nil {
-		return fmt.Errorf("reading an exit from the database: %v", err)
+		return fmt.Errorf("iterating over exits: %v", err)
 	}
 
 	return nil

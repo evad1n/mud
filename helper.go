@@ -28,30 +28,30 @@ func centerText(text string, size int, fill rune) string {
 }
 
 // Remove a player from the room
-func (r *Room) removePlayer(p *Player) {
-	if i := index(len(r.Players), func(idx int) bool { return r.Players[idx] == p }); i != -1 {
-		r.Players = append(r.Players[:i], r.Players[i+1:]...)
+func (r *room) removePlayer(p *player) {
+	if i := index(len(r.players), func(idx int) bool { return r.players[idx] == p }); i != -1 {
+		r.players = append(r.players[:i], r.players[i+1:]...)
 	}
 }
 
 // Sort players in alphabetical order
-func (r *Room) sortPlayers() {
-	sort.Slice(r.Players, func(i, j int) bool {
-		return r.Players[i].Name < r.Players[j].Name
+func (r *room) sortPlayers() {
+	sort.Slice(r.players, func(i, j int) bool {
+		return r.players[i].name < r.players[j].name
 	})
 }
 
 // Remove a player from the zone
-func (z *Zone) removePlayer(p *Player) {
-	if i := index(len(z.Players), func(idx int) bool { return z.Players[idx] == p }); i != -1 {
-		z.Players = append(z.Players[:i], z.Players[i+1:]...)
+func (z *zone) removePlayer(p *player) {
+	if i := index(len(z.players), func(idx int) bool { return z.players[idx] == p }); i != -1 {
+		z.players = append(z.players[:i], z.players[i+1:]...)
 	}
 }
 
 // Sort players in alphabetical order
-func (z *Zone) sortPlayers() {
-	sort.Slice(z.Players, func(i, j int) bool {
-		return z.Players[i].Name < z.Players[j].Name
+func (z *zone) sortPlayers() {
+	sort.Slice(z.players, func(i, j int) bool {
+		return z.players[i].name < z.players[j].name
 	})
 }
 
@@ -63,6 +63,7 @@ func plural(num int, unit string) string {
 	return unit + "s"
 }
 
+// Returns current IPv4 address
 func getLocalAddress() string {
 	var localaddress string
 

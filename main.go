@@ -18,20 +18,20 @@ var (
 	serverLog     *log.Logger
 	eventLog      *log.Logger
 	// All players on the server
-	players map[string]*Player
+	players map[string]*player
 )
 
 // Erase player's old prompt
-func (p *Player) erasePrompt() {
+func (p *player) erasePrompt() {
 	// Move up 3 lines and then clear to bottom
-	fmt.Fprint(p.Conn, "\x1b[3A\x1b[1000D\x1b[0J")
+	fmt.Fprint(p.conn, "\x1b[3A\x1b[1000D\x1b[0J")
 	// Move back to bottom
-	fmt.Fprint(p.Conn, "\x1b[1B")
+	fmt.Fprint(p.conn, "\x1b[1B")
 }
 
 // Display player command prompt
-func (p *Player) prompt() {
-	fmt.Fprintf(p.Conn, "%s\n>>> ", strings.Repeat("_", 40))
+func (p *player) prompt() {
+	fmt.Fprintf(p.conn, "%s\n>>> ", strings.Repeat("_", 40))
 }
 
 func main() {
@@ -47,46 +47,46 @@ func main() {
 	initWorld()
 
 	// Create global players list
-	players = make(map[string]*Player)
+	players = make(map[string]*player)
 
 	// Client input channel
-	in := make(chan Input)
+	inputs := make(chan input)
 
 	serverLog.Println("Listening for connections...")
-	go listenConnections(in)
+	go listenConnections(inputs)
 
 	// Create event log
 	eventLog = log.New(os.Stdout, "EVENT: ", log.Ldate|log.Ltime)
 
 	for {
 		// Get input
-		ev := <-in
+		ev := <-inputs
 		// Erase player's old prompt
-		ev.Player.erasePrompt()
+		ev.player.erasePrompt()
 		// Check for closed connection
-		if ev.End {
-			if ev.Player.Chan != nil {
-				ev.Player.disconnect()
+		if ev.end {
+			if ev.player.events != nil {
+				ev.player.disconnect()
 			}
 			// Already shutting down -> ignore
 			continue
 		}
 		// Otherwise process commands
-		if words := strings.Fields(ev.Text); len(words) > 0 {
+		if words := strings.Fields(ev.text); len(words) > 0 {
 			// Check if cmd exists
 			if validCmd, exists := commands[strings.ToLower(words[0])]; exists {
 				params := strings.Join(words[1:], " ")
 				// Log to server
-				eventLog.Printf("PLAYER: %s | COMMAND: %s | PARAMS: %s\n", ev.Player.Name, validCmd.Name, params)
+				eventLog.Printf("PLAYER: %s | COMMAND: %s | PARAMS: %s\n", ev.player.name, validCmd.name, params)
 				// Actually run the command
-				validCmd.Run(ev.Player, params)
+				validCmd.run(ev.player, params)
 			} else {
-				fmt.Fprintln(ev.Player.Conn, "Unrecognized command!")
+				fmt.Fprintln(ev.player.conn, "Unrecognized command!")
 			}
 		}
 		// Show another prompt if player is still playing
-		if ev.Player.Chan != nil {
-			ev.Player.prompt()
+		if ev.player.events != nil {
+			ev.player.prompt()
 		}
 
 	}
@@ -96,29 +96,29 @@ func main() {
 func initWorld() {
 	createMaps()
 	defaultCommands()
-	if err := loadDB(); err != nil {
-		serverLog.Fatal(err)
+	if err := loadWorld(); err != nil {
+		serverLog.Fatal(fmt.Errorf("loading world from database: %v", err))
 	}
 }
 
 // Create a player and add it to the global players map
-func createPlayer(name string, conn net.Conn, log *log.Logger, out chan Output) (*Player, error) {
+func createPlayer(name string, conn net.Conn, log *log.Logger, out chan event) (*player, error) {
 	if _, exists := players[name]; exists {
 		return nil, fmt.Errorf("That username is taken")
 	}
-	player := &Player{
-		Name:  name,
-		Conn:  conn,
-		Log:   log,
-		Chan:  out,
-		Begin: time.Now(),
-		Zone:  rooms[3001].Zone,
-		Room:  rooms[3001],
+	p := &player{
+		name:      name,
+		conn:      conn,
+		log:       log,
+		events:    out,
+		beginTime: time.Now(),
+		zone:      rooms[3001].zone,
+		room:      rooms[3001],
 	}
 	// Add to data
-	players[player.Name] = player
-	player.Zone.Players = append(player.Zone.Players, player)
-	player.Room.Players = append(player.Room.Players, player)
+	players[p.name] = p
+	p.zone.players = append(p.zone.players, p)
+	p.room.players = append(p.room.players, p)
 
-	return player, nil
+	return p, nil
 }

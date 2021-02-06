@@ -6,68 +6,61 @@ import (
 	"time"
 )
 
-// Player represents the user and all associated state
-type Player struct {
-	// Username
-	Name string
-	// Connection
-	Conn net.Conn
-	// Client log
-	Log *log.Logger
-	// MUD event channel
-	Chan chan Output
-	// The beginning of the session
-	Begin time.Time
-	// The current zone
-	Zone *Zone
-	// The current room
-	Room *Room
-}
+type (
+	player struct {
+		name      string      // Username
+		conn      net.Conn    // Connection
+		log       *log.Logger // Client log
+		events    chan event  // MUD outgoing event channel
+		beginTime time.Time   // The beginning of the session
+		zone      *zone       // The current zone
+		room      *room       // The current room
+	}
 
-// Command represents a user function with its associated name
-type Command struct {
-	Name string
-	// The family of the command
-	Category string
-	// Short description of command
-	Description string
-	// The linked function
-	Run func(*Player, string)
-}
+	// A command with all it's info, including linked function
+	command struct {
+		name        string
+		category    string      // The type of command
+		description string      // Short description of command
+		run         commandFunc // The linked function
+	}
 
-// Input represents an event going from the player to MUD
-type Input struct {
-	Player *Player
-	Text   string
-	End    bool
-}
+	commandFunc func(*player, string) // A command run by a player
 
-// Output represents an event going from MUD to the player
-type Output struct {
-	Player *Player
-	Effect string
-}
+	// Input represents an event going from the player to MUD
+	input struct {
+		player *player // The sending player
+		text   string  // The raw text entered
+		end    bool    // Signals the connection should be terminated
+	}
 
-// Zone represents a an area of the world
-type Zone struct {
-	ID      int
-	Name    string
-	Rooms   []*Room
-	Players []*Player
-}
+	// Output represents an event going from MUD to the player
+	event struct {
+		player *player // The player who initiated the effect
+		effect string  // The effect to be printed to the recieving player
+	}
 
-// Room represents a room in a zone
-type Room struct {
-	ID          int
-	Zone        *Zone
-	Name        string
-	Description string
-	Exits       [6]Exit
-	Players     []*Player
-}
+	// An area of the world
+	zone struct {
+		id      int
+		name    string
+		rooms   []*room   // All rooms in this zone
+		players []*player // All players currently in the zone
+	}
 
-// Exit represents a connection between rooms
-type Exit struct {
-	To          *Room
-	Description string
-}
+	// A room in a zone
+	room struct {
+		id          int
+		zone        *zone // The zone this room is part of
+		name        string
+		description string
+		exits       [6]exit   // The connections from this room to others
+		players     []*player // All players currently in the room
+	}
+
+	// A connection between rooms
+	exit struct {
+		to          *room // Where this exit leads to
+		description string
+	}
+)

@@ -11,7 +11,7 @@ import (
 )
 
 // Listen for incoming client connections
-func listenConnections(in chan Input) {
+func listenConnections(inputs chan input) {
 	server, err := net.Listen("tcp", ":"+port)
 	defer server.Close()
 	if err != nil {
@@ -22,12 +22,12 @@ func listenConnections(in chan Input) {
 		if err != nil {
 			serverLog.Fatalf("Error accepting connection: %v", err)
 		}
-		go handleConnection(conn, in)
+		go handleConnection(conn, inputs)
 	}
 }
 
 // Handle a client connection with their own command loop
-func handleConnection(conn net.Conn, in chan Input) {
+func handleConnection(conn net.Conn, inputs chan input) {
 	defer conn.Close()
 	clientLog := log.New(conn, "CLIENT: ", log.Ldate|log.Ltime)
 	fmt.Fprintln(conn)
@@ -38,13 +38,13 @@ func handleConnection(conn net.Conn, in chan Input) {
 
 	scanner := bufio.NewScanner(conn)
 
-	// Player event channel
-	out := make(chan Output)
+	// player event channel
+	out := make(chan event)
 
 	// Validate username loop
 	var (
-		player *Player
-		err    error
+		p   *player
+		err error
 	)
 	for badName := true; badName; badName = (err != nil) {
 		if err != nil {
@@ -61,64 +61,64 @@ func handleConnection(conn net.Conn, in chan Input) {
 			err = fmt.Errorf("Username must be less than 21 characters")
 			continue
 		}
-		player, err = createPlayer(name, conn, clientLog, out)
+		p, err = createPlayer(name, conn, clientLog, out)
 	}
-	fmt.Fprintf(conn, "\nHello, %s! Welcome to MUD!\n\n\n", player.Name)
 
-	serverLog.Printf("Player '%s' joined the MUD from %s", player.Name, conn.RemoteAddr().String())
+	fmt.Fprintf(conn, "\nHello, %s! Welcome to MUD!\n\n\n", p.name)
+
+	serverLog.Printf("player '%s' joined the MUD from %s", p.name, conn.RemoteAddr().String())
 
 	time.Sleep(1 * time.Second)
 
-	player.printLocation()
+	p.printLocation()
 	fmt.Fprintln(conn, "Type 'help' to see all available commands!")
 
-	go player.listenMUD()
+	go p.listenMUD()
 
 	// Initial prompt
-	player.prompt()
+	p.prompt()
 	for scanner.Scan() {
 		// Add a newline after commands
 		fmt.Fprintln(conn)
 
-		in <- Input{player, scanner.Text(), false}
+		inputs <- input{p, scanner.Text(), false}
 	}
-	// FIX: idk this doesn't look good
 	if err := scanner.Err(); err != nil {
+		serverLog.Printf("Client (%s) connection error: %v", conn.RemoteAddr().String(), err)
 		// Ignore
-		// serverLog.Printf("Client (%s) connection error: %v", conn.RemoteAddr().String(), err)
 	}
 	// Connection has been closed
-	in <- Input{player, "", true}
+	inputs <- input{p, "", true}
 }
 
 // Have a client listen for mud events
-func (p *Player) listenMUD() {
-	defer p.Conn.Close()
-	for ev := range p.Chan {
+func (p *player) listenMUD() {
+	defer p.conn.Close()
+	for ev := range p.events {
 		// Erase old prompt
 		p.erasePrompt()
-		fmt.Fprintln(p.Conn, ev.Effect)
+		fmt.Fprintln(p.conn, ev.effect)
 		// New prompt
 		p.prompt()
 	}
-	p.Log.Printf("Disconnected from MUD server on %s:%s\n", serverAddress, port)
-	playTime := time.Now().Sub(p.Begin)
+	p.log.Printf("Disconnected from MUD server on %s:%s\n", serverAddress, port)
+	playTime := time.Now().Sub(p.beginTime)
 	h, m := int(math.Round(playTime.Hours())), int(math.Round(playTime.Minutes()))%60
-	p.Log.Printf("You played for %d %s and %d %s", h, plural(h, "hour"), m, plural(m, "minute"))
+	p.log.Printf("You played for %d %s and %d %s", h, plural(h, "hour"), m, plural(m, "minute"))
 	// Close connection
-	serverLog.Printf("Player '%s' connection terminated\n", p.Name)
+	serverLog.Printf("player '%s' connection terminated\n", p.name)
 }
 
 // Terminate a connection
-func (p *Player) disconnect() {
+func (p *player) disconnect() {
 	// Shut down channel
-	close(p.Chan)
-	p.Chan = nil
+	close(p.events)
+	p.events = nil
 	// Remove player
-	p.Room.removePlayer(p)
-	p.Zone.removePlayer(p)
-	delete(players, p.Name)
+	p.room.removePlayer(p)
+	p.zone.removePlayer(p)
+	delete(players, p.name)
 	// Log to server
-	serverLog.Printf("Player '%s' disconnected from %s\n", p.Name, p.Conn.RemoteAddr().String())
+	serverLog.Printf("player '%s' disconnected from %s\n", p.name, p.conn.RemoteAddr().String())
 	// Connection will automatically close after channel is closed
 }
