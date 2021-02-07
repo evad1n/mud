@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	commands           map[string]command         // Map of command aliases to commands
+	commands           map[string]*command        // Map of command aliases to commands
 	commandCategoryMap map[commandCategory]string // Maps commandCategory enums to string descriptions
 	dirs               map[string]string          // Direction abbreviations
 	dirRuneToInt       map[rune]int               // Maps the exit direction string to its place in the room exit array
@@ -77,7 +77,7 @@ func addMapPrefix(full string, m map[string]string) {
 
 // Adds all starting commands
 func defaultCommands() {
-	commands = make(map[string]command)
+	commands = make(map[string]*command)
 
 	// In order of precedence
 
@@ -226,10 +226,10 @@ func addCommand(alias string, cmd command) {
 		}
 		prefix := alias[:i]
 		if _, exists := commands[prefix]; !exists {
-			commands[prefix] = cmd
+			commands[prefix] = &cmd
 		}
 	}
-	commands[alias] = cmd
+	commands[alias] = &cmd
 }
 
 //////////////
@@ -239,7 +239,13 @@ func addCommand(alias string, cmd command) {
 // Navigation
 
 func (p *player) doRecall(_ string) {
-	fmt.Fprint(p.conn, "You head back to the Temple of Midgard...\n\n")
+	p.events <- event{
+		player:   p,
+		output:   "You head back to the Temple of Midgard...\n",
+		command:  commands["recall"],
+		delay:    1000,
+		noPrompt: true,
+	}
 	p.moveToRoom(rooms[3001])
 }
 
@@ -311,6 +317,7 @@ func (p *player) doLook(direction string) {
 			p.events <- event{
 				player: p,
 				output: "Usage: look <north|south|east|west|up|down>",
+				err:    true,
 			}
 		}
 	}
@@ -323,10 +330,10 @@ func (p *player) printLocation() {
 	output += p.room.description
 
 	// Show exits
-	output += "EXITS: [ "
+	output += "\nEXITS: [ "
 	for i, exit := range p.room.exits {
 		if exit.to != nil {
-			output += fmt.Sprintf("%c ", dirIntToRune[i])
+			output += fmt.Sprintf("%s ", ansiWrap(string(dirIntToRune[i]), "\x1b[36m"))
 		}
 	}
 	output += "]\n\n"
@@ -334,10 +341,10 @@ func (p *player) printLocation() {
 	output += "PLAYERS: [ "
 	for _, other := range p.room.players {
 		if other != p {
-			output += fmt.Sprintf("%s ", other.name)
+			output += fmt.Sprintf("%s ", ansiWrap(other.name, "\x1b[32m"))
 		}
 	}
-	output += "]\n\n"
+	output += "]\n"
 	// Send formatted output to player
 	p.events <- event{
 		player: p,
@@ -401,7 +408,7 @@ func (p *player) doListCommands(_ string) {
 
 	// All aliases associated with a command
 	type aliasList struct {
-		cmd     command
+		cmd     *command
 		aliases []string
 	}
 
@@ -473,6 +480,7 @@ func (p *player) doListCommands(_ string) {
 // Speak to all players on server
 func (p *player) doGossip(msg string) {
 	p.serverCommand(
+		commands["gossip"],
 		fmt.Sprintf("%s gossips: %s", p.name, msg),
 		fmt.Sprintf("You gossip: %s", msg),
 	)
@@ -481,6 +489,7 @@ func (p *player) doGossip(msg string) {
 // Speak to all players in a zone
 func (p *player) doShout(msg string) {
 	p.zoneCommand(
+		commands["shout"],
 		fmt.Sprintf("%s shouts: %s", p.name, msg),
 		fmt.Sprintf("You shout: %s", msg),
 	)
@@ -489,6 +498,7 @@ func (p *player) doShout(msg string) {
 // Speak to all players in a room
 func (p *player) doSay(msg string) {
 	p.roomCommand(
+		commands["say"],
 		fmt.Sprintf("%s says: %s", p.name, msg),
 		fmt.Sprintf("You say: %s", msg),
 	)
@@ -500,6 +510,7 @@ func (p *player) doTell(cmd string) {
 		name := words[0]
 		msg := strings.Join(words[1:], " ")
 		p.targetedServerCommand(
+			commands["tell"],
 			name,
 			fmt.Sprintf("%s tells you: %s\n", p.name, msg),
 			fmt.Sprintf("You tell %s: %s\n", name, msg),
@@ -509,6 +520,7 @@ func (p *player) doTell(cmd string) {
 		p.events <- event{
 			player: p,
 			output: "Usage: tell <player name> <Message>",
+			err:    true,
 		}
 	}
 }
@@ -517,6 +529,7 @@ func (p *player) doPoke(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 1 {
 		name := words[0]
 		p.targetedRoomCommand(
+			commands["poke"],
 			name,
 			fmt.Sprintf("%s poked you!", p.name),
 			fmt.Sprintf("You poke %s", name),
@@ -526,6 +539,7 @@ func (p *player) doPoke(cmd string) {
 		p.events <- event{
 			player: p,
 			output: "Usage: poke <?player name>",
+			err:    true,
 		}
 	}
 }
@@ -534,10 +548,15 @@ func (p *player) doPoke(cmd string) {
 
 func (p *player) doSmile(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 0 {
-		p.roomCommand(fmt.Sprintf("%s smiles happily", p.name), "You smile happily")
+		p.roomCommand(
+			commands["smile"],
+			fmt.Sprintf("%s smiles happily", p.name),
+			"You smile happily",
+		)
 	} else if len(words) == 1 {
 		name := words[0]
 		p.targetedRoomCommand(
+			commands["smile"],
 			name,
 			fmt.Sprintf("%s smiles at you", p.name),
 			fmt.Sprintf("You smile at %s", name),
@@ -547,6 +566,7 @@ func (p *player) doSmile(cmd string) {
 		p.events <- event{
 			player: p,
 			output: "Usage: smile <?player name>",
+			err:    true,
 		}
 
 	}
@@ -554,10 +574,15 @@ func (p *player) doSmile(cmd string) {
 
 func (p *player) doScowl(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 0 {
-		p.roomCommand(fmt.Sprintf("%s scowls angrily.", p.name), "You scowl angrily")
+		p.roomCommand(
+			commands["scowl"],
+			fmt.Sprintf("%s scowls angrily.", p.name),
+			"You scowl angrily",
+		)
 	} else if len(words) == 1 {
 		name := words[0]
 		p.targetedRoomCommand(
+			commands["scowl"],
 			name,
 			fmt.Sprintf("%s scowls at you", p.name),
 			fmt.Sprintf("You scowl at %s", name),
@@ -567,16 +592,22 @@ func (p *player) doScowl(cmd string) {
 		p.events <- event{
 			player: p,
 			output: "Usage: scowl <?player name>",
+			err:    true,
 		}
 	}
 }
 
 func (p *player) doSigh(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 0 {
-		p.roomCommand(fmt.Sprintf("%s sighs heavily", p.name), "You sigh heavily")
+		p.roomCommand(
+			commands["sigh"],
+			fmt.Sprintf("%s sighs heavily", p.name),
+			"You sigh heavily",
+		)
 	} else if len(words) == 1 {
 		name := words[0]
 		p.targetedRoomCommand(
+			commands["sigh"],
 			name,
 			fmt.Sprintf("%s sighs at you", p.name),
 			fmt.Sprintf("You sigh at %s", name),
@@ -586,16 +617,22 @@ func (p *player) doSigh(cmd string) {
 		p.events <- event{
 			player: p,
 			output: "Usage: sigh <?player name>",
+			err:    true,
 		}
 	}
 }
 
 func (p *player) doLaugh(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 0 {
-		p.roomCommand(fmt.Sprintf("%s laughs heartily", p.name), "You laugh heartily")
+		p.roomCommand(commands["laugh"],
+			fmt.Sprintf("%s laughs heartily",
+				p.name),
+			"You laugh heartily",
+		)
 	} else if len(words) == 1 {
 		name := words[0]
 		p.targetedRoomCommand(
+			commands["laugh"],
 			name,
 			fmt.Sprintf("%s laughs at you", p.name),
 			fmt.Sprintf("You laugh at %s", name),
@@ -605,6 +642,7 @@ func (p *player) doLaugh(cmd string) {
 		p.events <- event{
 			player: p,
 			output: "Usage: laugh <?player name>",
+			err:    true,
 		}
 	}
 }
@@ -612,6 +650,7 @@ func (p *player) doLaugh(cmd string) {
 func (p *player) doThink(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 0 {
 		p.roomCommand(
+			commands["think"],
 			fmt.Sprintf("%s is in deep thought", p.name),
 			"You are in deep thought",
 		)
@@ -619,6 +658,7 @@ func (p *player) doThink(cmd string) {
 		p.events <- event{
 			player: p,
 			output: "Usage: think",
+			err:    true,
 		}
 	}
 }
@@ -628,8 +668,9 @@ func (p *player) doThink(cmd string) {
 // Disconnect the player gracefully
 func (p *player) doQuit(_ string) {
 	p.events <- event{
-		player: p,
-		output: fmt.Sprintf("Goodbye %s!\nThanks for playing!\n\n", p.name),
+		player:   p,
+		output:   fmt.Sprintf("Goodbye %s!\nThanks for playing!\n", p.name),
+		noPrompt: true,
 	}
 	p.disconnect()
 }
@@ -637,110 +678,124 @@ func (p *player) doQuit(_ string) {
 // Helper functions
 
 // Represents a command that targets another player in the room
-func (p *player) targetedRoomCommand(name string, outMsg string, selfMsg string, errSelf string) {
+func (p *player) targetedRoomCommand(cmd *command, name string, outMsg string, selfMsg string, errSelf string) {
 	if idx := index(len(p.room.players), func(i int) bool { return p.room.players[i].name == name }); idx != -1 {
 		other := p.room.players[idx]
 		if other != p {
 			other.events <- event{
-				player: p,
-				output: outMsg,
+				player:  p,
+				output:  outMsg,
+				command: cmd,
 			}
 			p.events <- event{
-				player: p,
-				output: selfMsg,
+				player:  p,
+				output:  selfMsg,
+				command: cmd,
 			}
 		} else {
 			p.events <- event{
-				player: p,
-				output: errSelf,
+				player:  p,
+				output:  errSelf,
+				command: cmd,
 			}
 		}
 	} else {
 		p.events <- event{
 			player: p,
 			output: "No such player!",
+			err:    true,
 		}
 	}
 }
 
 // Represents a command that targets another player cross-server
-func (p *player) targetedServerCommand(name string, outMsg string, selfMsg string, errSelf string) {
+func (p *player) targetedServerCommand(cmd *command, name string, outMsg string, selfMsg string, errSelf string) {
 	if other, exists := players[name]; exists {
 		if other != p {
 			other.events <- event{
-				player: p,
-				output: outMsg,
+				player:  p,
+				output:  outMsg,
+				command: cmd,
 			}
 			p.events <- event{
-				player: p,
-				output: selfMsg,
+				player:  p,
+				output:  selfMsg,
+				command: cmd,
 			}
 		} else {
 			p.events <- event{
-				player: p,
-				output: errSelf,
+				player:  p,
+				output:  errSelf,
+				command: cmd,
 			}
 		}
 	} else {
 		p.events <- event{
 			player: p,
 			output: "No such player!",
+			err:    true,
 		}
 	}
 }
 
 // A command that affects everyone in the room
-func (p *player) roomCommand(outMsg string, selfMsg string) {
+func (p *player) roomCommand(cmd *command, outMsg string, selfMsg string) {
 	for _, other := range p.room.players {
 		if other != p {
 			if ch := other.events; ch != nil {
 				ch <- event{
-					player: p,
-					output: outMsg,
+					player:  p,
+					output:  outMsg,
+					command: cmd,
 				}
 			}
 		} else {
 			p.events <- event{
-				player: p,
-				output: selfMsg,
+				player:  p,
+				output:  selfMsg,
+				command: cmd,
 			}
 		}
 	}
 }
 
 // A command that affects everyone in the zone
-func (p *player) zoneCommand(outMsg string, selfMsg string) {
+func (p *player) zoneCommand(cmd *command, outMsg string, selfMsg string) {
 	for _, other := range p.zone.players {
 		if other != p {
 			if ch := other.events; ch != nil {
 				ch <- event{
-					player: p,
-					output: outMsg,
+					player:  p,
+					output:  outMsg,
+					command: cmd,
 				}
 			}
 		} else {
 			p.events <- event{
-				player: p,
-				output: selfMsg,
+				player:  p,
+				output:  selfMsg,
+				command: cmd,
 			}
 		}
 	}
 }
 
 // A command that affects everyone in the server
-func (p *player) serverCommand(outMsg string, selfMsg string) {
+func (p *player) serverCommand(cmd *command, outMsg string, selfMsg string) {
 	for _, other := range players {
 		if other != p {
 			if ch := other.events; ch != nil {
 				ch <- event{
-					player: p,
-					output: outMsg,
+					player:  p,
+					output:  outMsg,
+					command: cmd,
 				}
 			}
 		} else {
 			p.events <- event{
-				player: p,
-				output: selfMsg,
+				player:  p,
+				output:  selfMsg,
+				command: cmd,
 			}
 		}
 	}

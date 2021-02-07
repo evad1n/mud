@@ -67,7 +67,11 @@ func main() {
 				// Actually run the command
 				validCmd.run(ev.player, params)
 			} else {
-				fmt.Fprintln(ev.player.conn, "Unrecognized command!")
+				ev.player.events <- event{
+					player: ev.player,
+					output: "Unrecognized command!",
+					err:    true,
+				}
 			}
 		}
 		// Show another prompt if player is still playing

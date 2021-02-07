@@ -28,7 +28,6 @@ func listenConnections(inputs chan input) {
 
 // Handle a client connection with their own command loop
 func handleConnection(conn net.Conn, inputs chan input) {
-	defer conn.Close()
 	clientLog := log.New(conn, "CLIENT: ", log.Ldate|log.Ltime)
 	fmt.Fprintln(conn)
 	clientLog.Printf("Connected to MUD server on %s:%s\n\n", serverAddress, port)
@@ -70,7 +69,7 @@ func handleConnection(conn net.Conn, inputs chan input) {
 
 	serverLog.Printf("player '%s' joined the MUD from %s", p.name, conn.RemoteAddr().String())
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(1000 * time.Millisecond)
 
 	p.printLocation()
 
@@ -84,7 +83,9 @@ func handleConnection(conn net.Conn, inputs chan input) {
 		inputs <- input{p, scanner.Text(), false}
 	}
 	if err := scanner.Err(); err != nil {
-		serverLog.Printf("Client (%s) connection error: %v", conn.RemoteAddr().String(), err)
+		if p.events != nil {
+			serverLog.Printf("Client (%s) connection error: %v", conn.RemoteAddr().String(), err)
+		}
 		// Ignore
 	}
 	// Connection has been closed
@@ -94,12 +95,28 @@ func handleConnection(conn net.Conn, inputs chan input) {
 
 // Have a client listen for mud events
 func (p *player) listenMUD() {
+	defer p.conn.Close()
 	for ev := range p.events {
+		if ev.command != nil {
+			// Color output based on command effect
+			switch ev.command.category {
+			case emotes:
+				ev.output = ansiWrap(ev.output, "\x1b[37m")
+			case nav:
+				ev.output = ansiWrap(ev.output, "\x1b[36m")
+			}
+		}
+		if ev.err {
+			ev.output = ansiWrap(ev.output, "\x1b[31m")
+		}
 		// Erase old prompt
 		p.erasePrompt()
 		fmt.Fprintln(p.conn, ev.output)
-		// New prompt
-		p.prompt()
+		time.Sleep(time.Duration(ev.delay) * time.Millisecond)
+		if !ev.noPrompt {
+			// New prompt
+			p.prompt()
+		}
 	}
 	p.log.Printf("Disconnected from MUD server on %s:%s\n", serverAddress, port)
 	playTime := time.Now().Sub(p.beginTime)

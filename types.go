@@ -38,9 +38,12 @@ type (
 
 	// Output represents an event going from MUD to the player
 	event struct {
-		player   *player // The player who initiated the effect
-		output   string  // The string output to be printed to the recieving player
-		noPrompt bool    // Whether to print the prompt
+		player   *player  // The player who initiated the effect
+		output   string   // The string output to be printed to the recieving player
+		command  *command // The command that caused this event
+		delay    int      // An optional delay (in milliseconds) after this prompt
+		noPrompt bool     // Whether to print the prompt
+		err      bool     // Prints in red
 	}
 
 	// An area of the world
