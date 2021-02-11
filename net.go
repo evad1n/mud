@@ -125,6 +125,8 @@ func (p *player) listenMUD() {
 			// New prompt
 			p.prompt()
 		}
+		// Redraw screen
+		p.display.screen.Render()
 	}
 	p.log.Printf("Disconnected from MUD server on %s:%s\n", serverAddress, port)
 	playTime := time.Now().Sub(p.beginTime)

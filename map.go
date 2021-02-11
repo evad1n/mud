@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -109,10 +108,9 @@ func (m *mapBuilder) trace(start *room, visited map[int]bool) {
 	}
 }
 
-func (m *mapBuilder) render() []string {
+func (m *mapBuilder) render() string {
 	var (
-		w     strings.Builder
-		lines []string
+		w strings.Builder
 	)
 	for y := m.depth*yScale + 2; y >= -m.depth*yScale-2; y-- {
 		for x := -m.depth*xScale - 3; x <= m.depth*xScale+3; x++ {
@@ -122,11 +120,9 @@ func (m *mapBuilder) render() []string {
 				w.WriteRune(' ')
 			}
 		}
-		w.WriteRune('\n')
-		lines = append(lines, w.String())
-		w.Reset()
+		// w.WriteRune('\n')
 	}
-	return lines
+	return w.String()
 }
 
 func (m *mapBuilder) drawBox(center pair) {
@@ -168,7 +164,6 @@ func textCoords(center pair) (int, int) {
 }
 
 func (p *player) drawMap() {
-	for _, line := range p.minimap.render() {
-		fmt.Fprintf(p.conn, line)
-	}
+	lines := p.minimap.render()
+	p.display.minimap.Write(lines)
 }

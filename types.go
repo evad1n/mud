@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"mud/screen"
 	"net"
 	"time"
 )
@@ -17,6 +18,15 @@ type (
 		room      *room        // The current room
 		minimap   *mapBuilder  // The displayed minimap
 		visited   map[int]bool // Visited rooms for the map
+		display   mudDisplay
+	}
+
+	// A struct to hold the screen and sections for drawing the mud
+	mudDisplay struct {
+		screen   *screen.Screen
+		minimap  *screen.Section
+		location *screen.Section
+		chat     *screen.Section
 	}
 
 	// A command with all it's info, including linked function
