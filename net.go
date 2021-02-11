@@ -62,8 +62,11 @@ func handleConnection(conn net.Conn, inputs chan input) {
 		}
 		p, err = createPlayer(name, conn, clientLog, out)
 	}
+
 	// Player object is initialized
 	go p.listenMUD()
+
+	p.joinServer()
 
 	fmt.Fprintf(p.conn, "\nHello, %s! Welcome to MUD!\n\n\n", p.name)
 
@@ -72,6 +75,7 @@ func handleConnection(conn net.Conn, inputs chan input) {
 	time.Sleep(1000 * time.Millisecond)
 
 	p.printLocation()
+	p.drawMap()
 
 	p.events <- event{
 		player: p,
@@ -90,13 +94,16 @@ func handleConnection(conn net.Conn, inputs chan input) {
 	}
 	// Connection has been closed
 	inputs <- input{p, "", true}
-	serverLog.Printf("player '%s' connection terminated\n", p.name)
 }
 
 // Have a client listen for mud events
 func (p *player) listenMUD() {
 	defer p.conn.Close()
 	for ev := range p.events {
+		if ev.redrawMap {
+			p.drawMap()
+			continue
+		}
 		if ev.command != nil {
 			// Color output based on command effect
 			switch ev.command.category {
@@ -110,7 +117,8 @@ func (p *player) listenMUD() {
 			ev.output = ansiWrap(ev.output, "\x1b[31m")
 		}
 		// Erase old prompt
-		p.erasePrompt()
+		p.erasePrompt(ev.player)
+		// Account for pressing enter
 		fmt.Fprintln(p.conn, ev.output)
 		time.Sleep(time.Duration(ev.delay) * time.Millisecond)
 		if !ev.noPrompt {
@@ -122,9 +130,11 @@ func (p *player) listenMUD() {
 	playTime := time.Now().Sub(p.beginTime)
 	h, m := int(math.Round(playTime.Hours())), int(math.Round(playTime.Minutes()))%60
 	p.log.Printf("You played for %d %s and %d %s", h, plural(h, "hour"), m, plural(m, "minute"))
+
+	serverLog.Printf("player '%s' connection terminated\n", p.name)
 }
 
-// Terminate a connection
+// Terminate a connection and remove the player from the world data
 func (p *player) disconnect() {
 	// Shut down channel
 	close(p.events)

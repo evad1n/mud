@@ -101,9 +101,13 @@ func getLocalAddress() string {
 // IO manip
 
 // Erase player's old prompt
-func (p *player) erasePrompt() {
+func (p *player) erasePrompt(from *player) {
 	// Move up 3 lines and then clear to bottom
-	fmt.Fprint(p.conn, "\x1b[2A\x1b[1000D\x1b[0J")
+	if p != from {
+		fmt.Fprint(p.conn, "\x1b[1A\x1b[1000D\x1b[0J")
+	} else {
+		fmt.Fprint(p.conn, "\x1b[2A\x1b[1000D\x1b[0J")
+	}
 	// Move back to bottom
 	fmt.Fprint(p.conn, "\x1b[1B")
 }

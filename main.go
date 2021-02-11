@@ -48,13 +48,14 @@ func main() {
 		// Get input
 		ev := <-inputs
 		// Erase player's old prompt
-		ev.player.erasePrompt()
+		ev.player.erasePrompt(ev.player)
 		// Check for closed connection
 		if ev.end {
 			if ev.player.events != nil {
 				ev.player.disconnect()
 			}
 			// Already shutting down -> ignore
+			serverLog.Printf("player '%s' disconnecting...\n", ev.player.name)
 			continue
 		}
 		// Otherwise process commands
@@ -101,13 +102,48 @@ func createPlayer(name string, conn net.Conn, log *log.Logger, out chan event) (
 		log:       log,
 		events:    out,
 		beginTime: time.Now(),
-		zone:      rooms[3001].zone,
-		room:      rooms[3001],
+		zone:      nil,
+		room:      nil,
+		minimap:   newMapBuilder(4),
+		visited:   make(map[int]bool),
 	}
 	// Add to data
 	players[p.name] = p
-	p.zone.players = append(p.zone.players, p)
-	p.room.players = append(p.room.players, p)
 
 	return p, nil
+}
+
+// Move to starting room (Temple of Midgaard)
+// Notify other players
+func (p *player) joinServer() {
+	r := rooms[3001]
+
+	// Notify players on server of new join
+	for _, other := range players {
+		if other != p {
+			other.events <- event{
+				player: p,
+				output: fmt.Sprintf("%s has join the server.", p.name),
+			}
+		}
+	}
+
+	// Notify other players in room
+	for _, other := range r.players {
+		other.events <- event{
+			player: p,
+			output: fmt.Sprintf("%s has entered the room.", p.name),
+		}
+	}
+
+	p.room = r
+	p.room.players = append(r.players, p)
+	p.zone = r.zone
+	p.zone.players = append(r.zone.players, p)
+
+	p.room.sortPlayers()
+
+	// Update map
+	p.visited[p.room.id] = true
+	p.minimap.trace(p.room, p.visited)
 }

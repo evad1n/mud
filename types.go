@@ -8,13 +8,15 @@ import (
 
 type (
 	player struct {
-		name      string      // Username
-		conn      net.Conn    // Connection
-		log       *log.Logger // Client log
-		events    chan event  // MUD outgoing event channel
-		beginTime time.Time   // The beginning of the session
-		zone      *zone       // The current zone
-		room      *room       // The current room
+		name      string       // Username
+		conn      net.Conn     // Connection
+		log       *log.Logger  // Client log
+		events    chan event   // MUD outgoing event channel
+		beginTime time.Time    // The beginning of the session
+		zone      *zone        // The current zone
+		room      *room        // The current room
+		minimap   *mapBuilder  // The displayed minimap
+		visited   map[int]bool // Visited rooms for the map
 	}
 
 	// A command with all it's info, including linked function
@@ -38,12 +40,13 @@ type (
 
 	// Output represents an event going from MUD to the player
 	event struct {
-		player   *player  // The player who initiated the effect
-		output   string   // The string output to be printed to the recieving player
-		command  *command // The command that caused this event
-		delay    int      // An optional delay (in milliseconds) after this prompt
-		noPrompt bool     // Whether to print the prompt
-		err      bool     // Prints in red
+		player    *player  // The player who initiated the effect
+		output    string   // The string output to be printed to the recieving player
+		command   *command // The command that caused this event
+		delay     int      // An optional delay (in milliseconds) after this prompt
+		noPrompt  bool     // Whether to print the prompt
+		err       bool     // Prints in red
+		redrawMap bool     // Whether to redraw the map
 	}
 
 	// An area of the world

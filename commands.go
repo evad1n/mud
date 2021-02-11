@@ -303,6 +303,15 @@ func (p *player) moveToRoom(r *room) {
 	p.room.sortPlayers()
 
 	p.printLocation()
+
+	// Update map
+	p.visited[p.room.id] = true
+	p.minimap.trace(p.room, p.visited)
+	p.events <- event{
+		player:    p,
+		output:    "",
+		redrawMap: true,
+	}
 }
 
 // Information
@@ -576,7 +585,7 @@ func (p *player) doScowl(cmd string) {
 	if words := strings.Fields(cmd); len(words) == 0 {
 		p.roomCommand(
 			commands["scowl"],
-			fmt.Sprintf("%s scowls angrily.", p.name),
+			fmt.Sprintf("%s scowls angrily", p.name),
 			"You scowl angrily",
 		)
 	} else if len(words) == 1 {
