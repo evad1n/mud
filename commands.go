@@ -240,11 +240,10 @@ func addCommand(alias string, cmd command) {
 
 func (p *player) doRecall(_ string) {
 	p.events <- event{
-		player:   p,
-		output:   "You head back to the Temple of Midgard...\n",
-		command:  commands["recall"],
-		delay:    1000,
-		noPrompt: true,
+		player:  p,
+		output:  "You head back to the Temple of Midgard...\n",
+		command: commands["recall"],
+		delay:   1000,
 	}
 	p.moveToRoom(rooms[3001])
 }
@@ -353,7 +352,7 @@ func (p *player) printLocation() {
 			output += fmt.Sprintf("%s ", ansiWrap(other.name, "\x1b[32m"))
 		}
 	}
-	output += "]\n"
+	output += "]"
 	// Send formatted output to player
 	p.events <- event{
 		player: p,

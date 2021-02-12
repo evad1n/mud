@@ -50,13 +50,14 @@ type (
 
 	// Output represents an event going from MUD to the player
 	event struct {
-		player    *player  // The player who initiated the effect
-		output    string   // The string output to be printed to the recieving player
-		command   *command // The command that caused this event
-		delay     int      // An optional delay (in milliseconds) after this prompt
-		noPrompt  bool     // Whether to print the prompt
-		err       bool     // Prints in red
-		redrawMap bool     // Whether to redraw the map
+		player      *player  // The player who initiated the effect
+		output      string   // The string output to be printed to the recieving player
+		command     *command // The command tat caused this event
+		delay       int      // An optional delay (in milliseconds) after this prompt
+		unsolicited bool     // Whether the user pressed enter
+		noPrompt    bool     // Whether to draw the prompt again
+		err         bool     // Prints in red
+		redrawMap   bool     // Whether to redraw the map
 	}
 
 	// An area of the world

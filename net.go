@@ -72,14 +72,17 @@ func handleConnection(conn net.Conn, inputs chan input) {
 
 	serverLog.Printf("player '%s' joined the MUD from %s", p.name, conn.RemoteAddr().String())
 
-	time.Sleep(1000 * time.Millisecond)
+	// time.Sleep(1000 * time.Millisecond)
+
+	fmt.Fprint(p.conn, "\x1b[2J")
 
 	p.printLocation()
 	p.drawMap()
 
 	p.events <- event{
-		player: p,
-		output: "Type 'help' to see all available commands!",
+		player:      nil,
+		output:      "Type 'help' to see all available commands!",
+		unsolicited: true,
 	}
 
 	for scanner.Scan() {
@@ -88,7 +91,7 @@ func handleConnection(conn net.Conn, inputs chan input) {
 	}
 	if err := scanner.Err(); err != nil {
 		if p.events != nil {
-			serverLog.Printf("Client (%s) connection error: %v", conn.RemoteAddr().String(), err)
+			serverLog.Printf("Client %s connection error: %v", conn.RemoteAddr().String(), err)
 		}
 		// Ignore
 	}
@@ -100,9 +103,8 @@ func handleConnection(conn net.Conn, inputs chan input) {
 func (p *player) listenMUD() {
 	defer p.conn.Close()
 	for ev := range p.events {
-		if ev.redrawMap {
-			p.drawMap()
-			continue
+		if ev.player != p {
+			ev.unsolicited = true
 		}
 		if ev.command != nil {
 			// Color output based on command effect
@@ -116,17 +118,8 @@ func (p *player) listenMUD() {
 		if ev.err {
 			ev.output = ansiWrap(ev.output, "\x1b[31m")
 		}
-		// Erase old prompt
-		p.erasePrompt(ev.player)
-		// Account for pressing enter
-		fmt.Fprintln(p.conn, ev.output)
+		p.eventPrint(ev)
 		time.Sleep(time.Duration(ev.delay) * time.Millisecond)
-		if !ev.noPrompt {
-			// New prompt
-			p.prompt()
-		}
-		// Redraw screen
-		p.display.screen.Render()
 	}
 	p.log.Printf("Disconnected from MUD server on %s:%s\n", serverAddress, port)
 	playTime := time.Now().Sub(p.beginTime)

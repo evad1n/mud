@@ -68,6 +68,7 @@ func (s *Screen) NewSection(x int, y int, width int, height int) (*Section, erro
 	for y := section.Y; y < section.Y+section.Height; y++ {
 		for x := section.X; x < section.X+section.Width; x++ {
 			s.SectionMap[pair{x, y}] = section
+			section.Text[pair{x, y}] = ' '
 		}
 	}
 
@@ -94,6 +95,7 @@ func (s *Screen) NewStaticSection(x int, y int, width int, height int, text stri
 	for y := section.Y; y < section.Y+section.Height; y++ {
 		for x := section.X; x < section.X+section.Width; x++ {
 			s.SectionMap[pair{x, y}] = section
+			section.Text[pair{x, y}] = ' '
 		}
 	}
 
@@ -130,13 +132,15 @@ func (s *Screen) Render() {
 				if ch, written := section.Text[pair{x, y}]; written {
 					b.WriteRune(ch)
 				} else {
-					b.WriteRune(' ')
+					b.WriteRune('#')
 				}
 			} else {
-				b.WriteRune(' ')
+				b.WriteRune('@')
 			}
 		}
-		b.WriteRune('\n')
+		if y != 0 {
+			b.WriteRune('\n')
+		}
 	}
 
 	fmt.Fprint(s.Writer, "\x1b[2J")
@@ -151,8 +155,27 @@ func (s *Section) Write(text string) error {
 	var lines []string
 	// Split into lines
 	for len(text) > s.Width {
-		lines = append(lines, text[:s.Width])
+		line := text[:s.Width]
 		text = text[s.Width:]
+		// Split on newlines
+		for newLineIdx := strings.IndexRune(line, '\n'); newLineIdx != -1; newLineIdx = strings.IndexRune(line, '\n') {
+			l := line[:newLineIdx]
+			line = line[newLineIdx+1:]
+
+			// Pad lines with spaces
+			l += strings.Repeat(" ", s.Width-len(l))
+			lines = append(lines, l)
+			fill := s.Width - len(line)
+			if fill > len(text) {
+				line += text
+				text = ""
+			} else {
+				line += text[:fill]
+				text = text[fill:]
+			}
+		}
+		line += strings.Repeat(" ", s.Width-len(line))
+		lines = append(lines, line)
 	}
 	lines = append(lines, text)
 
@@ -178,7 +201,7 @@ func (s *Section) Write(text string) error {
 	// Now map lines to text
 	for y, line := range lines {
 		for x, ch := range line {
-			s.Text[pair{s.X + x, s.Y + y}] = ch
+			s.Text[pair{s.X + x, s.Y + s.Height - y}] = ch
 		}
 	}
 

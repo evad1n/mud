@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -11,6 +12,7 @@ type (
 
 	mapBuilder struct {
 		depth int
+		width int // The width of the drawin map in characters
 		grid  map[pair]*room
 		text  map[pair]rune
 	}
@@ -40,6 +42,7 @@ var (
 func newMapBuilder(depth int) *mapBuilder {
 	return &mapBuilder{
 		depth: depth,
+		width: (2 * depth * xScale) + 9,
 		grid:  make(map[pair]*room),
 		text:  make(map[pair]rune),
 	}
@@ -108,9 +111,10 @@ func (m *mapBuilder) trace(start *room, visited map[int]bool) {
 	}
 }
 
-func (m *mapBuilder) render() string {
+func (m *mapBuilder) render() []string {
 	var (
-		w strings.Builder
+		w     strings.Builder
+		lines []string
 	)
 	for y := m.depth*yScale + 2; y >= -m.depth*yScale-2; y-- {
 		for x := -m.depth*xScale - 3; x <= m.depth*xScale+3; x++ {
@@ -120,9 +124,10 @@ func (m *mapBuilder) render() string {
 				w.WriteRune(' ')
 			}
 		}
-		// w.WriteRune('\n')
+		lines = append(lines, w.String())
+		w.Reset()
 	}
-	return w.String()
+	return lines
 }
 
 func (m *mapBuilder) drawBox(center pair) {
@@ -165,5 +170,9 @@ func textCoords(center pair) (int, int) {
 
 func (p *player) drawMap() {
 	lines := p.minimap.render()
-	p.display.minimap.Write(lines)
+	// Cursor top left
+	fmt.Fprint(p.conn, "\x1b[H")
+	for _, line := range lines {
+		fmt.Fprintf(p.conn, "%s %c \x1b[1E", line, '║')
+	}
 }
