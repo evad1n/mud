@@ -301,16 +301,15 @@ func (p *player) moveToRoom(r *room) {
 
 	p.room.sortPlayers()
 
-	p.printLocation()
-
 	// Update map
-	p.visited[p.room.id] = true
-	p.minimap.trace(p.room, p.visited)
 	p.events <- event{
 		player:    p,
 		output:    "",
-		redrawMap: true,
+		updateMap: true,
 	}
+
+	p.printLocation()
+
 }
 
 // Information
@@ -675,11 +674,6 @@ func (p *player) doThink(cmd string) {
 
 // Disconnect the player gracefully
 func (p *player) doQuit(_ string) {
-	p.events <- event{
-		player:   p,
-		output:   fmt.Sprintf("Goodbye %s!\nThanks for playing!\n", p.name),
-		noPrompt: true,
-	}
 	p.disconnect()
 }
 

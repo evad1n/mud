@@ -11,10 +11,11 @@ type (
 	}
 
 	mapBuilder struct {
-		depth int
-		width int // The width of the drawin map in characters
-		grid  map[pair]*room
-		text  map[pair]rune
+		depth  int
+		width  int // The width of the drawn map in characters
+		height int // The height of the drawn map in characters
+		grid   map[pair]*room
+		text   map[pair]rune
 	}
 )
 
@@ -41,10 +42,11 @@ var (
 
 func newMapBuilder(depth int) *mapBuilder {
 	return &mapBuilder{
-		depth: depth,
-		width: (2 * depth * xScale) + 9,
-		grid:  make(map[pair]*room),
-		text:  make(map[pair]rune),
+		depth:  depth,
+		width:  (2 * depth * xScale) + 6,
+		height: (2 * depth * yScale) + 4,
+		grid:   make(map[pair]*room),
+		text:   make(map[pair]rune),
 	}
 }
 
@@ -170,9 +172,9 @@ func textCoords(center pair) (int, int) {
 
 func (p *player) drawMap() {
 	lines := p.minimap.render()
-	// Cursor top left
+	// Cursor top left of screen
 	fmt.Fprint(p.conn, "\x1b[H")
 	for _, line := range lines {
-		fmt.Fprintf(p.conn, "%s %c \x1b[1E", line, '║')
+		fmt.Fprintf(p.conn, "%s\x1b[1E", line)
 	}
 }

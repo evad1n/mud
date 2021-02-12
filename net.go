@@ -72,12 +72,12 @@ func handleConnection(conn net.Conn, inputs chan input) {
 
 	serverLog.Printf("player '%s' joined the MUD from %s", p.name, conn.RemoteAddr().String())
 
-	// time.Sleep(1000 * time.Millisecond)
+	// Add delay to show welcome msg before entering prompt
+	time.Sleep(1000 * time.Millisecond)
 
 	fmt.Fprint(p.conn, "\x1b[2J")
 
 	p.printLocation()
-	p.drawMap()
 
 	p.events <- event{
 		player:      nil,
@@ -103,6 +103,10 @@ func handleConnection(conn net.Conn, inputs chan input) {
 func (p *player) listenMUD() {
 	defer p.conn.Close()
 	for ev := range p.events {
+		if ev.updateMap {
+			p.visited[p.room.id] = true
+			p.minimap.trace(p.room, p.visited)
+		}
 		if ev.player != p {
 			ev.unsolicited = true
 		}
@@ -121,6 +125,9 @@ func (p *player) listenMUD() {
 		p.eventPrint(ev)
 		time.Sleep(time.Duration(ev.delay) * time.Millisecond)
 	}
+	// Clear screen
+	fmt.Fprint(p.conn, "\x1b[2J")
+	fmt.Fprintf(p.conn, "Goodbye %s!\nThanks for playing!\n", p.name)
 	p.log.Printf("Disconnected from MUD server on %s:%s\n", serverAddress, port)
 	playTime := time.Now().Sub(p.beginTime)
 	h, m := int(math.Round(playTime.Hours())), int(math.Round(playTime.Minutes()))%60

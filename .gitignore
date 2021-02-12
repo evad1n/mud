@@ -1,4 +1,8 @@
+# Track SQLite DB
 !*.db
+# Binary
 mud
-
+# Go debugger files
 __debug_bin
+# Some weird SQLite backup files
+*.db-

@@ -9,6 +9,8 @@ const (
 	fullWidth = 140
 )
 
+var ()
+
 func (p *player) eventPrint(ev event) {
 	width := fullWidth - p.minimap.width
 	text := ev.output
@@ -23,6 +25,8 @@ func (p *player) eventPrint(ev event) {
 			text = text[col+1:]
 			zeroCol(p)
 			fmt.Fprintf(p.conn, "%s\n", line)
+			zeroCol(p)
+			fmt.Fprintf(p.conn, "\x1b[1A\x1b[2D%c\x1b[1B", '║')
 			col = 0
 			continue
 		}
@@ -33,6 +37,8 @@ func (p *player) eventPrint(ev event) {
 			text = text[truncateIdx:]
 			zeroCol(p)
 			fmt.Fprintf(p.conn, "%s\n", line)
+			zeroCol(p)
+			fmt.Fprintf(p.conn, "\x1b[1A\x1b[2D%c\x1b[1B", '║')
 			col = 0
 			continue
 		}
@@ -42,15 +48,30 @@ func (p *player) eventPrint(ev event) {
 	zeroCol(p)
 	fmt.Fprintf(p.conn, "%s\n\n", text)
 
+	// Make space for prompt (so map fits snugly)
+	fmt.Fprintf(p.conn, "\n")
+
 	p.drawMap()
 
 	// New prompt
 	p.prompt()
+
+	p.drawDivider()
+
+	// Move cursor to correct position
+	fmt.Fprintf(p.conn, "\x1b[1000B")
+	zeroCol(p)
+	fmt.Fprintf(p.conn, "\x1b[4C")
 }
 
 // Go to the 0 column for the event display
 func zeroCol(p *player) {
 	fmt.Fprintf(p.conn, "\x1b[%dG", p.minimap.width+3)
+}
+
+// Go to the 0 column for the event display
+func dividerCol(p *player) {
+	fmt.Fprintf(p.conn, "\x1b[%dG", p.minimap.width+1)
 }
 
 // Erase player's old prompt
@@ -63,19 +84,32 @@ func (p *player) erasePrompt(ev event) {
 	for i := 0; i < 2; i++ {
 		fmt.Fprintf(p.conn, "\x1b[%dG\x1b[0K\x1b[1A", p.minimap.width)
 	}
-	// Back to bottom
-	// fmt.Fprintf(p.conn, "\x1b[3B")
+	// Back to print location
+	fmt.Fprint(p.conn, "\x1b[1B")
 	zeroCol(p)
 }
 
 // Display player command prompt
 func (p *player) prompt() {
+	// Go to bottom fo screen in events channel
+	fmt.Fprintf(p.conn, "\x1b[10000B")
 	zeroCol(p)
-	fmt.Fprintf(p.conn, "\n")
+	fmt.Fprintf(p.conn, "\x1b[1A")
 	zeroCol(p)
-	fmt.Fprintf(p.conn, "%s\n", strings.Repeat("_", fullWidth-p.minimap.width)) // Separator
+	fmt.Fprintf(p.conn, "%s\x1b[1B", strings.Repeat("_", fullWidth-p.minimap.width)) // Separator
 	zeroCol(p)
 	fmt.Fprintf(p.conn, ">>> ")
+}
+
+// Draws the vertical divider for the visible screen
+func (p *player) drawDivider() {
+	// Cursor top left
+	fmt.Fprintf(p.conn, "\x1b[1000A")
+	dividerCol(p)
+	for i := 0; i <= 100; i++ {
+		fmt.Fprintf(p.conn, "%c\x1b[1B\x1b[1D", '║')
+	}
+
 }
 
 // Wrap some text in an ansi code
