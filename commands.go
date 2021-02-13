@@ -59,6 +59,17 @@ func createMaps() {
 	commandCategoryMap[comm] = "communication"
 	commandCategoryMap[emotes] = "emotes"
 	commandCategoryMap[special] = "special"
+
+	// ANSI colors map
+	ansiColors = make(map[string]string)
+	ansiColors["black"] = "\x1b[30m"
+	ansiColors["red"] = "\x1b[31m"
+	ansiColors["green"] = "\x1b[32m"
+	ansiColors["yellow"] = "\x1b[33m"
+	ansiColors["blue"] = "\x1b[34m"
+	ansiColors["magenta"] = "\x1b[35m"
+	ansiColors["cyan"] = "\x1b[36m"
+	ansiColors["white"] = "\x1b[37m"
 }
 
 /* Maps prefixes to full name for a map */
@@ -241,7 +252,7 @@ func addCommand(alias string, cmd command) {
 func (p *player) doRecall(_ string) {
 	p.events <- event{
 		player:  p,
-		output:  "You head back to the Temple of Midgard...\n",
+		output:  "\nYou head back to the Temple of Midgard...\n",
 		command: commands["recall"],
 		delay:   1000,
 	}
@@ -350,7 +361,7 @@ func (p *player) printLocation() {
 	output += "\nEXITS: [ "
 	for i, exit := range p.room.exits {
 		if exit.to != nil {
-			output += fmt.Sprintf("%s ", ansiWrap(string(dirIntToRune[i]), "\x1b[36m"))
+			output += fmt.Sprintf("%s ", ansiWrap(string(dirIntToRune[i]), ansiColors["cyan"]))
 		}
 	}
 	output += "]\n\n"
@@ -358,7 +369,7 @@ func (p *player) printLocation() {
 	output += "PLAYERS: [ "
 	for _, other := range p.room.players {
 		if other != p {
-			output += fmt.Sprintf("%s ", ansiWrap(other.name, "\x1b[32m"))
+			output += fmt.Sprintf("%s ", ansiWrap(other.name, ansiColors["yellow"]))
 		}
 	}
 	output += "]"
@@ -373,7 +384,7 @@ func (p *player) lookDirection(dir string) {
 	if exit := p.room.exits[dirRuneToInt[rune(strings.ToLower(dir)[0])]]; exit.to != nil {
 		p.events <- event{
 			player: p,
-			output: exit.description,
+			output: strings.TrimSuffix(exit.description, "\n"),
 		}
 	} else {
 		p.events <- event{
@@ -393,7 +404,11 @@ func (p *player) doWhere(_ string) {
 	p.zone.sortPlayers()
 
 	for _, other := range p.zone.players {
-		output += fmt.Sprintf("|%s|%s|\n", centerText(other.name, 20, ' '), centerText(other.room.name, 40, ' '))
+		if other != p {
+			output += fmt.Sprintf("|%s|%s|\n", ansiWrap(centerText(other.name, 20, ' '), ansiColors["yellow"]), centerText(other.room.name, 40, ' '))
+		} else {
+			output += fmt.Sprintf("|%s|%s|\n", ansiWrap(centerText(p.name, 20, ' '), ansiColors["green"]), centerText(other.room.name, 40, ' '))
+		}
 	}
 
 	output += fmt.Sprintf("+%s+", strings.Repeat("-", 61))
@@ -496,6 +511,7 @@ func (p *player) doListCommands(_ string) {
 
 // Speak to all players on server
 func (p *player) doGossip(msg string) {
+	msg = ansiWrap(msg, ansiColors["yellow"])
 	p.serverCommand(
 		commands["gossip"],
 		fmt.Sprintf("%s gossips: %s", p.name, msg),
@@ -505,6 +521,7 @@ func (p *player) doGossip(msg string) {
 
 // Speak to all players in a zone
 func (p *player) doShout(msg string) {
+	msg = ansiWrap(msg, ansiColors["yellow"])
 	p.zoneCommand(
 		commands["shout"],
 		fmt.Sprintf("%s shouts: %s", p.name, msg),
@@ -514,6 +531,7 @@ func (p *player) doShout(msg string) {
 
 // Speak to all players in a room
 func (p *player) doSay(msg string) {
+	msg = ansiWrap(msg, ansiColors["yellow"])
 	p.roomCommand(
 		commands["say"],
 		fmt.Sprintf("%s says: %s", p.name, msg),

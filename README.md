@@ -31,3 +31,9 @@ e.g. telnet:
 ```bash
 telnet <HOST> <PORT>
 ```
+
+## Screen size
+
+Adjust screen size until prompt spans only one line.
+
+If your screen isn't big enough well that sucks for you lol

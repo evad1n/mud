@@ -9,6 +9,10 @@ const (
 	fullWidth = 140
 )
 
+var (
+	ansiColors map[string]string
+)
+
 func (p *player) eventPrint(ev event) {
 	width := fullWidth - p.minimap.width
 	text := ev.output
@@ -107,7 +111,6 @@ func (p *player) drawDivider() {
 	for i := 0; i <= 100; i++ {
 		fmt.Fprintf(p.conn, "%c\x1b[1B\x1b[1D", '║')
 	}
-
 }
 
 func (p *player) drawMap() {

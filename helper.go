@@ -17,6 +17,16 @@ func index(length int, predicate func(idx int) bool) int {
 	return -1
 }
 
+// Returns whether the given slice has an element that satisfies the predicate
+func contain(length int, predicate func(idx int) bool) bool {
+	for i := 0; i < length; i++ {
+		if predicate(i) {
+			return true
+		}
+	}
+	return false
+}
+
 // Centers text in the middle of a column of size {size}
 func centerText(text string, size int, fill rune) string {
 	if &fill == nil {

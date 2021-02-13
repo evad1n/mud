@@ -27,7 +27,7 @@ func main() {
 	// Create server log
 	serverLog = log.New(os.Stdout, "SERVER: ", log.Ldate|log.Ltime)
 	serverLog.SetPrefix("SERVER: ")
-	serverLog.Printf("Starting server on %s:%s...\n", serverAddress, port)
+	serverLog.Println("Starting MUD server...")
 
 	serverLog.Println("Initializing world...")
 	initWorld()
@@ -38,11 +38,10 @@ func main() {
 	// Client input channel
 	inputs := make(chan input)
 
-	serverLog.Println("Listening for connections...")
 	go listenConnections(inputs)
 
 	// Create event log
-	eventLog = log.New(os.Stdout, "EVENT: ", log.Ldate|log.Ltime)
+	eventLog = log.New(os.Stdout, "EVENT: ", log.Ltime)
 
 	for {
 		// Get input

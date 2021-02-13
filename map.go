@@ -30,10 +30,10 @@ var (
 		{'╚', '═', '═', '═', '╝'},
 	}
 	cross            = 'X'
-	biArrows         = []rune{'⭥', '⭤', '⭤', '⭥', '⤢', '⤢'}
-	inZoneArrows     = []rune{'⭡', '⭢', '⭠', '⭣', '⭧', '⭩'}
-	outZoneArrows    = []rune{'⭱', '⭲', '⭰', '⭳', '⭷', '⭹'}
-	unknownArrows    = []rune{'🡡', '🡢', '🡠', '🡣', '🡥', '🡧'}
+	biArrows         = []rune{'⭥', '⇆', '⇄', '⭥', '⮥', '⮦', '⮦', '⮥'}
+	inZoneArrows     = []rune{'↑', '→', '←', '↓', '⮭', '⮮'}
+	unknownArrows    = []rune{'⇧', '⇨', '⇦', '⇩', '⮭', '⮮'}
+	outZoneArrows    = []rune{'⇑', '⇒', '⇐', '⇓', '⇗', '⇙'}
 	oppositeDirction = []int{3, 2, 1, 0, 5, 4}
 	dxByIndex        = []int{0, 1, -1, 0}
 	dyByIndex        = []int{1, 0, 0, -1}
@@ -85,21 +85,28 @@ func (m *mapBuilder) trace(start *room, visited map[int]bool) {
 			if forward < 4 {
 				dx, dy = dxByIndex[forward], dyByIndex[forward]
 				existing = m.grid[pair{here.x + dx, here.y + dy}]
-				back = target.exits[backward].to
 			}
+			back = target.exits[backward].to
 
 			switch {
 			case r.zone != target.zone:
 				m.drawExit(here, outZoneArrows[forward], forward)
 			case !seen:
 				m.drawExit(here, unknownArrows[forward], forward)
-			case forward < 4 && existing == nil:
+			case forward >= 4:
+				if r == back {
+					m.drawExit(here, biArrows[forward], forward)
+					m.drawExit(here, biArrows[forward+2], forward+2)
+				} else {
+					m.drawExit(here, inZoneArrows[forward], forward)
+				}
+			case existing == nil:
 				loc := pair{here.x + dx, here.y + dy}
 				m.grid[loc] = target
 				q = append(q, loc)
 
 				fallthrough
-			case forward < 4 && existing == target:
+			case existing == target:
 				if r == back {
 					m.drawExit(here, biArrows[forward], forward)
 				} else {
@@ -120,7 +127,15 @@ func (m *mapBuilder) render() []string {
 	for y := m.depth*yScale + 2; y >= -m.depth*yScale-2; y-- {
 		for x := -m.depth*xScale - 3; x <= m.depth*xScale+3; x++ {
 			if ch, present := m.text[pair{x, y}]; present {
-				w.WriteRune(ch)
+				if ch == cross {
+					w.WriteString(ansiWrap(string(ch), ansiColors["red"]))
+				} else if contain(len(unknownArrows), func(idx int) bool { return unknownArrows[idx] == ch }) {
+					w.WriteString(ansiWrap(string(ch), ansiColors["cyan"]))
+				} else if contain(len(outZoneArrows), func(idx int) bool { return outZoneArrows[idx] == ch }) {
+					w.WriteString(ansiWrap(string(ch), ansiColors["magenta"]))
+				} else {
+					w.WriteRune(ch)
+				}
 			} else {
 				w.WriteRune(' ')
 			}
@@ -160,8 +175,12 @@ func (m *mapBuilder) drawExit(center pair, arrow rune, dir int) {
 		m.text[pair{x + 3, y + 2}] = arrow
 	case 5: // down
 		m.text[pair{x - 3, y - 2}] = arrow
+	case 6: // up bi
+		m.text[pair{x + 2, y + 2}] = arrow
+	case 7: // down bi
+		m.text[pair{x - 2, y - 2}] = arrow
 	default:
-		m.text[pair{x, y + 2}] = arrow
+		m.text[pair{x - 3, y + 2}] = arrow
 	}
 }
 

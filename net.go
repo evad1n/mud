@@ -17,6 +17,7 @@ func listenConnections(inputs chan input) {
 		serverLog.Fatalf("Error starting server on port %s: %v", port, err)
 	}
 	defer server.Close()
+	serverLog.Printf("Listening for connections on %s:%s\n", serverAddress, port)
 	for {
 		conn, err := server.Accept()
 		if err != nil {
@@ -114,13 +115,13 @@ func (p *player) listenMUD() {
 			// Color output based on command effect
 			switch ev.command.category {
 			case emotes:
-				ev.output = ansiWrap(ev.output, "\x1b[37m")
+				ev.output = ansiWrap(ev.output, ansiColors["white"])
 			case nav:
-				ev.output = ansiWrap(ev.output, "\x1b[36m")
+				ev.output = ansiWrap(ev.output, ansiColors["cyan"])
 			}
 		}
 		if ev.err {
-			ev.output = ansiWrap(ev.output, "\x1b[31m")
+			ev.output = ansiWrap(ev.output, ansiColors["red"])
 		}
 		p.eventPrint(ev)
 		time.Sleep(time.Duration(ev.delay) * time.Millisecond)
@@ -131,7 +132,7 @@ func (p *player) listenMUD() {
 	p.log.Printf("Disconnected from MUD server on %s:%s\n", serverAddress, port)
 	playTime := time.Now().Sub(p.beginTime)
 	h, m := int(math.Round(playTime.Hours())), int(math.Round(playTime.Minutes()))%60
-	p.log.Printf("You played for %d %s and %d %s", h, plural(h, "hour"), m, plural(m, "minute"))
+	p.log.Printf("You played for %s %s and %s %s", ansiWrap(fmt.Sprint(h), ansiColors["green"]), plural(h, "hour"), ansiWrap(fmt.Sprint(m), ansiColors["green"]), plural(m, "minute"))
 
 	serverLog.Printf("player '%s' connection terminated\n", p.name)
 }
