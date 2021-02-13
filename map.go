@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 )
 
@@ -168,13 +167,4 @@ func (m *mapBuilder) drawExit(center pair, arrow rune, dir int) {
 
 func textCoords(center pair) (int, int) {
 	return center.x * xScale, center.y * yScale
-}
-
-func (p *player) drawMap() {
-	lines := p.minimap.render()
-	// Cursor top left of screen
-	fmt.Fprint(p.conn, "\x1b[H")
-	for _, line := range lines {
-		fmt.Fprintf(p.conn, "%s\x1b[1E", line)
-	}
 }

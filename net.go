@@ -138,6 +138,24 @@ func (p *player) listenMUD() {
 
 // Terminate a connection and remove the player from the world data
 func (p *player) disconnect() {
+	// Notify players in room
+	for _, other := range p.room.players {
+		if other != p {
+			other.events <- event{
+				player: p,
+				output: fmt.Sprintf("%s has left the room", p.name),
+			}
+		}
+	}
+	// Notify players on server of player leaving
+	for _, other := range players {
+		if other != p {
+			other.events <- event{
+				player: p,
+				output: fmt.Sprintf("%s has left the server", p.name),
+			}
+		}
+	}
 	// Shut down channel
 	close(p.events)
 	p.events = nil

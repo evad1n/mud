@@ -9,8 +9,6 @@ const (
 	fullWidth = 140
 )
 
-var ()
-
 func (p *player) eventPrint(ev event) {
 	width := fullWidth - p.minimap.width
 	text := ev.output
@@ -110,6 +108,15 @@ func (p *player) drawDivider() {
 		fmt.Fprintf(p.conn, "%c\x1b[1B\x1b[1D", '║')
 	}
 
+}
+
+func (p *player) drawMap() {
+	lines := p.minimap.render()
+	// Cursor top left of screen
+	fmt.Fprint(p.conn, "\x1b[H")
+	for _, line := range lines {
+		fmt.Fprintf(p.conn, "%s\x1b[1E", line)
+	}
 }
 
 // Wrap some text in an ansi code

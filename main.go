@@ -51,9 +51,10 @@ func main() {
 		if ev.end {
 			if ev.player.events != nil {
 				ev.player.disconnect()
+			} else {
+				// Already shutting down -> ignore
+				serverLog.Printf("player '%s' connection already closed\n", ev.player.name)
 			}
-			// Already shutting down -> ignore
-			serverLog.Printf("player '%s' disconnecting...\n", ev.player.name)
 			continue
 		}
 		// Otherwise process commands
@@ -118,16 +119,16 @@ func (p *player) joinServer() {
 		if other != p {
 			other.events <- event{
 				player: p,
-				output: fmt.Sprintf("%s has join the server.", p.name),
+				output: fmt.Sprintf("%s has joined the server", p.name),
 			}
 		}
 	}
 
-	// Notify other players in room
+	// Notify other players in starting room
 	for _, other := range r.players {
 		other.events <- event{
 			player: p,
-			output: fmt.Sprintf("%s has entered the room.", p.name),
+			output: fmt.Sprintf("%s has entered the room", p.name),
 		}
 	}
 

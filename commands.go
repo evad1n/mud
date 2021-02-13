@@ -286,11 +286,21 @@ func (p *player) moveToRoom(r *room) {
 	p.room.removePlayer(p)
 	p.zone.removePlayer(p)
 
-	// Notify other players in room
+	// Notify other players in old room
+	for _, other := range p.room.players {
+		if other != p {
+			other.events <- event{
+				player: p,
+				output: fmt.Sprintf("%s has left the room", p.name),
+			}
+		}
+	}
+
+	// Notify other players in new room
 	for _, other := range r.players {
 		other.events <- event{
 			player: p,
-			output: fmt.Sprintf("%s has entered the room.", p.name),
+			output: fmt.Sprintf("%s has entered the room", p.name),
 		}
 	}
 
@@ -519,8 +529,8 @@ func (p *player) doTell(cmd string) {
 		p.targetedServerCommand(
 			commands["tell"],
 			name,
-			fmt.Sprintf("%s tells you: %s\n", p.name, msg),
-			fmt.Sprintf("You tell %s: %s\n", name, msg),
+			fmt.Sprintf("%s tells you: %s", p.name, msg),
+			fmt.Sprintf("You tell %s: %s", name, msg),
 			"You know talking to yourself is a sign of insanity, right?",
 		)
 	} else {
@@ -704,7 +714,7 @@ func (p *player) targetedRoomCommand(cmd *command, name string, outMsg string, s
 	} else {
 		p.events <- event{
 			player: p,
-			output: "No such player!",
+			output: "No such player in this room!",
 			err:    true,
 		}
 	}
