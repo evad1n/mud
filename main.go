@@ -86,7 +86,7 @@ func initWorld() {
 }
 
 // Create a player and add it to the global players map
-func createPlayer(name string, conn net.Conn, log *log.Logger, out chan event) (*player, error) {
+func createPlayer(name string, conn net.Conn, log *log.Logger) (*player, error) {
 	if _, exists := players[name]; exists {
 		return nil, fmt.Errorf("That username is taken")
 	}
@@ -95,7 +95,7 @@ func createPlayer(name string, conn net.Conn, log *log.Logger, out chan event) (
 		name:      name,
 		conn:      conn,
 		log:       log,
-		events:    out,
+		events:    make(chan event),
 		beginTime: time.Now(),
 		zone:      nil,
 		room:      nil,

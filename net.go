@@ -38,9 +38,6 @@ func handleConnection(conn net.Conn, inputs chan input) {
 
 	scanner := bufio.NewScanner(conn)
 
-	// player event channel
-	out := make(chan event)
-
 	// Validate username loop
 	var (
 		p   *player
@@ -61,7 +58,7 @@ func handleConnection(conn net.Conn, inputs chan input) {
 			err = fmt.Errorf("Username must be less than 21 characters")
 			continue
 		}
-		p, err = createPlayer(name, conn, clientLog, out)
+		p, err = createPlayer(name, conn, clientLog)
 	}
 
 	// Player object is initialized
