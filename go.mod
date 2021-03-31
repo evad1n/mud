@@ -1,4 +1,4 @@
-module mud
+module github.com/evad1n/mud
 
 go 1.15
 
